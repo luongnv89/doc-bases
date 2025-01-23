@@ -19,23 +19,20 @@ jobs:
         with:
           python-version: "3.9"  # Use Python 3.9
 
-      - name: Install Poetry
-        run: |
-          pip install poetry  # Install Poetry using pip
-
-      - name: Cache Poetry virtualenv
-        id: cache-poetry
+      - name: Cache pip dependencies
+        id: cache-pip
         uses: actions/cache@v3
         with:
-          path: ~/.cache/pypoetry/virtualenvs
-          key: poetry-${{ runner.os }}-${{ hashFiles('poetry.lock') }}
+          path: ~/.cache/pip
+          key: pip-${{ runner.os }}-${{ hashFiles('requirements.txt') }}
           restore-keys: |
-            poetry-${{ runner.os }}-
+            pip-${{ runner.os }}-
 
       - name: Install dependencies
         run: |
-          poetry install --no-root  # Install dependencies without installing the root package
+          python -m pip install --upgrade pip  # Upgrade pip
+          pip install -r requirements.txt  # Install dependencies from requirements.txt
 
       - name: Run tests
         run: |
-          poetry run pytest tests/  # Run tests using Poetry
+          pytest tests/  # Run tests using pytest
