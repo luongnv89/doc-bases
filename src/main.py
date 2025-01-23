@@ -1,6 +1,5 @@
 # src/main.py
 import os
-import logging
 from dotenv import load_dotenv
 from src.utils.document_loader import DocumentLoader
 from src.utils.rag_utils import (
@@ -55,6 +54,7 @@ def cli_helper():
     """
     )
 
+
 def setup_rag_cli(doc_loader: DocumentLoader):
     """Prompts the user for the source of documents to setup RAG."""
     logger.info("Starting RAG setup CLI")
@@ -85,7 +85,6 @@ def setup_rag_cli(doc_loader: DocumentLoader):
         print("Exiting...")
         logger.info("Exiting application.")
         exit()
-
 
     docs = None
     input_str = None
@@ -126,11 +125,7 @@ def setup_rag_cli(doc_loader: DocumentLoader):
         print(f"A knowledge base with the name '{knowledge_base_name}' already exists.")
         logger.warning(f"Knowledge base '{knowledge_base_name}' already exists.")
         choice = (
-            input(
-                "Do you want to overwrite it (o), or cancel (c)? "
-            )
-            .strip()
-            .lower()
+            input("Do you want to overwrite it (o), or cancel (c)? ").strip().lower()
         )
         if choice == "c":
             print("Setup cancelled.")
@@ -138,32 +133,43 @@ def setup_rag_cli(doc_loader: DocumentLoader):
             return
         elif choice == "o":
             print("Overwriting existing knowledge base")
-            logger.info(f"User chose to overwrite knowledge base '{knowledge_base_name}'")
+            logger.info(
+                f"User chose to overwrite knowledge base '{knowledge_base_name}'"
+            )
             if source_choice == 1:
                 docs = doc_loader.load_documents_from_repo(input_str, overwrite=True)
             elif source_choice == 5:
                 docs = doc_loader.load_documents_from_url(input_str, overwrite=True)
             else:
                 print("Overwriting is only supported for Repo and Downloaded Files")
-                logger.warning("Overwriting is only supported for Repo and Downloaded Files")
+                logger.warning(
+                    "Overwriting is only supported for Repo and Downloaded Files"
+                )
                 return
 
             if docs:
                 setup_rag(docs, knowledge_base_name)
                 print("RAG system setup completed.")
-                logger.info(f"RAG system setup completed with overwrite option for '{knowledge_base_name}'.")
+                logger.info(
+                    f"RAG system setup completed with overwrite option for '{knowledge_base_name}'."
+                )
             else:
                 print("Failed to load documents with overwrite option")
-                logger.error(f"Failed to load documents with overwrite option for '{knowledge_base_name}'")
+                logger.error(
+                    f"Failed to load documents with overwrite option for '{knowledge_base_name}'"
+                )
             return
         else:
             print("Invalid choice. Skipping setup.")
-            logger.warning(f"Invalid choice. Skipping setup for '{knowledge_base_name}'")
+            logger.warning(
+                f"Invalid choice. Skipping setup for '{knowledge_base_name}'"
+            )
             return
 
     setup_rag(docs, knowledge_base_name)
     print("RAG system setup completed.")
     logger.info(f"RAG system setup completed for '{knowledge_base_name}'.")
+
 
 def main():
     """Main function to run the RAG system."""
@@ -198,7 +204,9 @@ def main():
             logger.info(f"Listed available knowledge bases: {knowledge_bases}")
         elif action == 3:
             knowledge_base_name = input("Enter knowledge base name to delete: ").strip()
-            logger.info(f"User requested deletion of knowledge base: {knowledge_base_name}")
+            logger.info(
+                f"User requested deletion of knowledge base: {knowledge_base_name}"
+            )
             delete_knowledge_base(knowledge_base_name)
         elif action == 4:
             interactive_cli()

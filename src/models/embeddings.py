@@ -3,7 +3,6 @@
 This module provides functions for getting embedding models.
 """
 import os
-import logging
 from typing import Optional
 from dotenv import load_dotenv
 from langchain_openai import OpenAIEmbeddings
@@ -43,15 +42,11 @@ def get_embedding_model(
     if not provider:
         provider = os.getenv("EMB_PROVIDER")
         if not provider:
-            raise ValueError(
-                "EMB_PROVIDER not found in environment variables."
-            )
+            raise ValueError("EMB_PROVIDER not found in environment variables.")
     if not model:
         model = os.getenv("EMB_MODEL")
         if not model:
-            raise ValueError(
-                "EMB_MODEL not found in environment variables."
-            )
+            raise ValueError("EMB_MODEL not found in environment variables.")
     if not api_base:
         api_base = os.getenv("EMB_API_BASE")
     logger.info(f"Getting Embedding Model: Provider={provider}, Model={model}")
@@ -70,8 +65,7 @@ def get_embedding_model(
                     "OPENAI_API_KEY not found in environment variables or user input."
                 )
             logger.info("Using OpenAI Embeddings Model")
-            return OpenAIEmbeddings(openai_api_key=api_key,
-                                    base_url=api_base)
+            return OpenAIEmbeddings(openai_api_key=api_key, base_url=api_base)
         elif provider == "ollama":
             logger.info("Using Ollama Embeddings Model")
             return OllamaEmbeddings(model=model)
@@ -95,8 +89,7 @@ def get_embedding_model(
                 logger.info(f"Getting {api_key_env_key} from env")
             if api_key:
                 logger.info(f"Using Custom Embedding Model provider {provider}")
-                return OpenAIEmbeddings(openai_api_key=api_key,
-                                        base_url=api_base)
+                return OpenAIEmbeddings(openai_api_key=api_key, base_url=api_base)
             else:
                 raise ValueError(f"Provider '{provider}' not supported and no api_key")
     except Exception as e:

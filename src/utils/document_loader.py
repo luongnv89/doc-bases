@@ -17,17 +17,25 @@ from typing import List, Optional
 from bs4 import BeautifulSoup
 from tqdm import tqdm
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain_community.document_loaders import TextLoader, PyPDFLoader, UnstructuredWordDocumentLoader, UnstructuredExcelLoader, UnstructuredPowerPointLoader
+from langchain_community.document_loaders import (
+    TextLoader,
+    PyPDFLoader,
+    UnstructuredWordDocumentLoader,
+    UnstructuredExcelLoader,
+    UnstructuredPowerPointLoader,
+)
 from langchain.schema import Document
 from src.utils.logger import get_logger
 
 # Setup logging
 logger = get_logger()
 
+
 class DocumentLoader:
     """
     A class for loading documents from various sources and processing them into chunks.
     """
+
     TEMP_DIR = "temps"
 
     def __init__(self, chunk_size: int = 1000, chunk_overlap: int = 200):
@@ -41,8 +49,9 @@ class DocumentLoader:
         if not os.path.exists(self.TEMP_DIR):
             os.makedirs(self.TEMP_DIR)
             logger.info(f"Created temporary directory: {self.TEMP_DIR}")
-        logger.info(f"DocumentLoader initialized with chunk_size: {chunk_size}, chunk_overlap: {chunk_overlap}")
-
+        logger.info(
+            f"DocumentLoader initialized with chunk_size: {chunk_size}, chunk_overlap: {chunk_overlap}"
+        )
 
     def set_chunks(self, chunk_size: int, chunk_overlap: int) -> None:
         """
@@ -54,7 +63,9 @@ class DocumentLoader:
         """
         self.chunk_size = chunk_size
         self.chunk_overlap = chunk_overlap
-        logger.info(f"Chunk size and overlap set to: chunk_size={chunk_size}, chunk_overlap={chunk_overlap}")
+        logger.info(
+            f"Chunk size and overlap set to: chunk_size={chunk_size}, chunk_overlap={chunk_overlap}"
+        )
 
     def _get_repo_name_from_url(self, repo_url: str) -> str:
         """Extracts the repository name from a GitHub URL."""
@@ -65,7 +76,9 @@ class DocumentLoader:
         logger.debug(f"Extracted repo name: {repo_name} from URL: {repo_url}")
         return repo_name
 
-    def _clone_repo(self, repo_url: str, local_path: Optional[str] = None, overwrite: bool = True) -> bool:
+    def _clone_repo(
+        self, repo_url: str, local_path: Optional[str] = None, overwrite: bool = True
+    ) -> bool:
         """
         Clones a Git repository to a local path within the 'temps' directory.
 
@@ -123,19 +136,29 @@ class DocumentLoader:
             mime_type = magic.from_file(file_path, mime=True)
             logger.info(f"File MIME Type: {mime_type}")
 
-            if mime_type.startswith('text/'):
+            if mime_type.startswith("text/"):
                 logger.info(f"Loading Text file: {file_path}")
                 return TextLoader(file_path).load()
-            elif mime_type == 'application/pdf':
+            elif mime_type == "application/pdf":
                 logger.info(f"Loading PDF file: {file_path}")
                 return PyPDFLoader(file_path).load()
-            elif mime_type == 'application/vnd.openxmlformats-officedocument.wordprocessingml.document':
+            elif (
+                mime_type
+                == "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            ):
                 logger.info(f"Loading Word document: {file_path}")
                 return UnstructuredWordDocumentLoader(file_path).load()
-            elif mime_type == 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet':
+            elif (
+                mime_type
+                == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            ):
                 logger.info(f"Loading Excel file: {file_path}")
                 return UnstructuredExcelLoader(file_path).load()
-            elif mime_type == 'application/vnd.openxmlformats-officedocument.presentationml.presentation' or mime_type == 'application/vnd.ms-powerpoint':
+            elif (
+                mime_type
+                == "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+                or mime_type == "application/vnd.ms-powerpoint"
+            ):
                 logger.info(f"Loading PowerPoint file: {file_path}")
                 return UnstructuredPowerPointLoader(file_path).load()
             else:
@@ -144,7 +167,6 @@ class DocumentLoader:
         except Exception as e:
             logger.error(f"Error loading document {file_path}: {e}")
             return None
-
 
     def _load_text_folder(self, folder_path: str) -> Optional[List[Document]]:
         """
@@ -183,7 +205,6 @@ class DocumentLoader:
             logger.error(f"Error while loading text folder: {e}")
             return None
 
-
     def _split_documents_to_chunk(
         self, documents: List[Document]
     ) -> Optional[List[Document]]:
@@ -203,16 +224,15 @@ class DocumentLoader:
                 chunk_size=self.chunk_size, chunk_overlap=self.chunk_overlap
             )
             split_documents = text_splitter.split_documents(documents)
-            logger.info(f"Successfully split documents into {len(split_documents)} chunks.")
+            logger.info(
+                f"Successfully split documents into {len(split_documents)} chunks."
+            )
             return split_documents
         except Exception as e:
             logger.error(f"Error splitting documents: {e}")
             return None
 
-
-    def _load_text_folder_to_chunk(
-        self, folder_path: str
-    ) -> Optional[List[Document]]:
+    def _load_text_folder_to_chunk(self, folder_path: str) -> Optional[List[Document]]:
         """
         Combines loading and chunking processes for text files in a folder.
 
@@ -241,8 +261,9 @@ class DocumentLoader:
             logger.error(f"Error in load_text_folder_to_chunk: {e}")
             return None
 
-
-    def _clone_and_parse_repo(self, repo_url: str, overwrite: bool = False) -> Optional[List[Document]]:
+    def _clone_and_parse_repo(
+        self, repo_url: str, overwrite: bool = False
+    ) -> Optional[List[Document]]:
         """
         Clones a GitHub repository, processes its files, and splits the text into chunks.
 
@@ -283,7 +304,6 @@ class DocumentLoader:
                 shutil.rmtree(local_path)
                 logger.info(f"Cleaned up cloned repo at {local_path}")
 
-
     def _download_file(self, url: str, local_path: str, overwrite: bool = True) -> bool:
         """
         Downloads a file from a URL to a local path within the 'temps' directory.
@@ -299,19 +319,20 @@ class DocumentLoader:
         local_path = os.path.join(self.TEMP_DIR, local_path)
 
         if os.path.exists(local_path) and overwrite:
-           logger.info(f"Overwriting existing path: {local_path}")
-           os.remove(local_path)
-
+            logger.info(f"Overwriting existing path: {local_path}")
+            os.remove(local_path)
 
         try:
             logger.info(f"Downloading file from {url} to {local_path}...")
             response = requests.get(url, stream=True)
             response.raise_for_status()  # Raise an exception for bad status codes
 
-            total_size = int(response.headers.get('content-length', 0))
-            progress_bar = tqdm(total=total_size, unit='iB', unit_scale=True, desc="Downloading")
+            total_size = int(response.headers.get("content-length", 0))
+            progress_bar = tqdm(
+                total=total_size, unit="iB", unit_scale=True, desc="Downloading"
+            )
 
-            with open(local_path, 'wb') as file:
+            with open(local_path, "wb") as file:
                 for chunk in response.iter_content(chunk_size=8192):
                     progress_bar.update(len(chunk))
                     file.write(chunk)
@@ -357,8 +378,9 @@ class DocumentLoader:
             logger.error(f"An unexpected error occurred during scraping: {e}")
             return None
 
-
-    def load_documents_from_url(self, file_url: str, overwrite:bool = False) -> Optional[List[Document]]:
+    def load_documents_from_url(
+        self, file_url: str, overwrite: bool = False
+    ) -> Optional[List[Document]]:
         """
         Downloads a file from a URL and returns chunked documents.
 
@@ -378,14 +400,17 @@ class DocumentLoader:
             local_path = os.path.join(self.TEMP_DIR, local_file_name)
             return self._load_single_document(local_path)
         except Exception as e:
-            logger.error(f"An error occurred during downloading or processing documents: {e}")
+            logger.error(
+                f"An error occurred during downloading or processing documents: {e}"
+            )
             return None
         finally:
             if os.path.exists(local_path):
                 os.remove(local_path)
 
-
-    def load_documents_from_directory(self, folder_path: str) -> Optional[List[Document]]:
+    def load_documents_from_directory(
+        self, folder_path: str
+    ) -> Optional[List[Document]]:
         """
         Loads documents from a directory and returns chunked documents.
 
@@ -399,9 +424,10 @@ class DocumentLoader:
         try:
             return self._load_text_folder_to_chunk(folder_path)
         except Exception as e:
-            logger.error(f"An error occurred during loading or processing documents: {e}")
+            logger.error(
+                f"An error occurred during loading or processing documents: {e}"
+            )
             return None
-
 
     def load_documents_from_file(self, file_path: str) -> Optional[List[Document]]:
         """
@@ -421,11 +447,14 @@ class DocumentLoader:
                 return None
             return self._split_documents_to_chunk(documents)
         except Exception as e:
-            logger.error(f"An error occurred during loading or processing document: {e}")
+            logger.error(
+                f"An error occurred during loading or processing document: {e}"
+            )
             return None
 
-
-    def load_documents_from_repo(self, repo_url: str, overwrite: bool = False) -> Optional[List[Document]]:
+    def load_documents_from_repo(
+        self, repo_url: str, overwrite: bool = False
+    ) -> Optional[List[Document]]:
         """
         Clones a repository from a URL and returns chunked documents.
 
@@ -441,10 +470,12 @@ class DocumentLoader:
         try:
             return self._clone_and_parse_repo(repo_url, overwrite)
         except Exception as e:
-            logger.error(f"An error occurred during loading or processing the repo: {e}")
+            logger.error(
+                f"An error occurred during loading or processing the repo: {e}"
+            )
             return None
 
-    def load_documents_from_website(self, url:str) -> Optional[List[Document]]:
+    def load_documents_from_website(self, url: str) -> Optional[List[Document]]:
         """
         Scrapes content from a website and returns chunked documents.
 
@@ -462,5 +493,7 @@ class DocumentLoader:
                 return None
             return self._split_documents_to_chunk([scraped_document])
         except Exception as e:
-            logger.error(f"An error occurred during scraping or processing the website: {e}")
+            logger.error(
+                f"An error occurred during scraping or processing the website: {e}"
+            )
             return None

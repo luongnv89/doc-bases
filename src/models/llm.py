@@ -17,6 +17,7 @@ from src.utils.logger import get_logger
 load_dotenv()
 logger = get_logger()
 
+
 def get_llm_model(
     provider: Optional[str] = None,
     model: Optional[str] = None,
@@ -41,15 +42,11 @@ def get_llm_model(
     if not provider:
         provider = os.getenv("LLM_PROVIDER")
         if not provider:
-          raise ValueError(
-                "LLM_PROVIDER not found in environment variables."
-            )
+            raise ValueError("LLM_PROVIDER not found in environment variables.")
     if not model:
         model = os.getenv("LLM_MODEL")
         if not model:
-            raise ValueError(
-                "LLM_MODEL not found in environment variables."
-            )
+            raise ValueError("LLM_MODEL not found in environment variables.")
     if not api_base:
         api_base = os.getenv("LLM_API_BASE")
 
@@ -61,52 +58,52 @@ def get_llm_model(
 
     try:
         if provider == "google":
-          if not api_key:
-            api_key = os.getenv("GOOGLE_API_KEY")
-            logger.info("Getting GOOGLE_API_KEY from env")
-          if not api_key:
-              raise ValueError(
-                  "GOOGLE_API_KEY not found in environment variables or user input."
-              )
-          logger.info("Using Google GenAI Model")
-          return ChatGoogleGenerativeAI(model=model, google_api_key=api_key)
+            if not api_key:
+                api_key = os.getenv("GOOGLE_API_KEY")
+                logger.info("Getting GOOGLE_API_KEY from env")
+            if not api_key:
+                raise ValueError(
+                    "GOOGLE_API_KEY not found in environment variables or user input."
+                )
+            logger.info("Using Google GenAI Model")
+            return ChatGoogleGenerativeAI(model=model, google_api_key=api_key)
 
         elif provider == "openai":
-          if not api_key:
-            api_key = os.getenv("OPENAI_API_KEY")
-            logger.info("Getting OPENAI_API_KEY from env")
-          if not api_key:
-              raise ValueError(
-                  "OPENAI_API_KEY not found in environment variables or user input."
-              )
-          logger.info("Using OpenAI Model")
-          return ChatOpenAI(model=model, openai_api_key=api_key,
-                            base_url=api_base)
+            if not api_key:
+                api_key = os.getenv("OPENAI_API_KEY")
+                logger.info("Getting OPENAI_API_KEY from env")
+            if not api_key:
+                raise ValueError(
+                    "OPENAI_API_KEY not found in environment variables or user input."
+                )
+            logger.info("Using OpenAI Model")
+            return ChatOpenAI(model=model, openai_api_key=api_key, base_url=api_base)
 
         elif provider == "grok":
             if not api_key:
-              api_key = os.getenv("GROQ_API_KEY")
-              logger.info("Getting GROQ_API_KEY from env")
+                api_key = os.getenv("GROQ_API_KEY")
+                logger.info("Getting GROQ_API_KEY from env")
             if not api_key:
-                  raise ValueError(
-                      "GROQ_API_KEY not found in environment variables or user input."
-                  )
+                raise ValueError(
+                    "GROQ_API_KEY not found in environment variables or user input."
+                )
             logger.info("Using Groq Model")
             return ChatGroq(api_key=api_key, model=model)
         elif provider == "ollama":
             logger.info("Using Ollama Model")
             return OllamaLLM(model=model, base_url=api_base)
         else:
-          if not api_key:
-            api_key_env_key = f"{provider.upper()}_API_KEY"
-            api_key = os.getenv(api_key_env_key)
-            logger.info(f"Getting {api_key_env_key} from env")
-          if api_key:
-             logger.info(f"Using Custom Model provider {provider}")
-             return ChatOpenAI(model=model, openai_api_key=api_key,
-                               base_url = api_base)
-          else:
-              raise ValueError(f"Provider '{provider}' not supported and no api_key")
+            if not api_key:
+                api_key_env_key = f"{provider.upper()}_API_KEY"
+                api_key = os.getenv(api_key_env_key)
+                logger.info(f"Getting {api_key_env_key} from env")
+            if api_key:
+                logger.info(f"Using Custom Model provider {provider}")
+                return ChatOpenAI(
+                    model=model, openai_api_key=api_key, base_url=api_base
+                )
+            else:
+                raise ValueError(f"Provider '{provider}' not supported and no api_key")
     except Exception as e:
         logger.error(f"Error getting LLM model: {e}")
         raise

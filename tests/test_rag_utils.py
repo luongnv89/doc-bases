@@ -9,11 +9,10 @@ from src.utils.rag_utils import (
     list_knowledge_bases,
     delete_knowledge_base,
     load_rag_chain,
-    interactive_cli,
-    KNOWLEDGE_BASE_DIR,
+    interactive_cli
 )
 from src.models.llm import get_llm_model
-from src.models.embeddings import get_embedding_model
+
 
 # Fixtures
 @pytest.fixture
@@ -24,15 +23,18 @@ def test_documents():
         Document(page_content="Another test document.", metadata={"source": "test"}),
     ]
 
+
 @pytest.fixture
 def test_knowledge_base_name():
     """Fixture for the test knowledge base name."""
     return "test_knowledge_base"
 
+
 @pytest.fixture
 def llm():
     """Fixture for the LLM model."""
     return get_llm_model()
+
 
 @pytest.fixture
 def mock_temp_dir():
@@ -44,6 +46,7 @@ def mock_temp_dir():
     if os.path.exists(temp_dir):
         shutil.rmtree(temp_dir)
 
+
 # Tests
 def test_setup_rag(test_documents, test_knowledge_base_name, llm, mock_temp_dir):
     """Test setting up the RAG system."""
@@ -51,19 +54,26 @@ def test_setup_rag(test_documents, test_knowledge_base_name, llm, mock_temp_dir)
     qa_chain = setup_rag(test_documents, test_knowledge_base_name, llm=llm)
     assert qa_chain is not None
 
-def test_list_knowledge_bases(test_documents, test_knowledge_base_name, llm, mock_temp_dir):
+
+def test_list_knowledge_bases(
+    test_documents, test_knowledge_base_name, llm, mock_temp_dir
+):
     """Test listing available knowledge bases."""
     os.environ["KNOWLEDGE_BASE_DIR"] = mock_temp_dir
     setup_rag(test_documents, test_knowledge_base_name, llm=llm)
     knowledge_bases = list_knowledge_bases()
     assert test_knowledge_base_name in knowledge_bases
 
-def test_delete_knowledge_base(test_documents, test_knowledge_base_name, llm, mock_temp_dir):
+
+def test_delete_knowledge_base(
+    test_documents, test_knowledge_base_name, llm, mock_temp_dir
+):
     """Test deleting a knowledge base."""
     os.environ["KNOWLEDGE_BASE_DIR"] = mock_temp_dir
     setup_rag(test_documents, test_knowledge_base_name, llm=llm)
     delete_knowledge_base(test_knowledge_base_name)
     assert not os.path.exists(os.path.join(mock_temp_dir, test_knowledge_base_name))
+
 
 def test_load_rag_chain(test_documents, test_knowledge_base_name, llm, mock_temp_dir):
     """Test loading a RAG chain from disk."""
@@ -72,12 +82,16 @@ def test_load_rag_chain(test_documents, test_knowledge_base_name, llm, mock_temp
     qa_chain = load_rag_chain(test_knowledge_base_name, llm=llm)
     assert qa_chain is not None
 
-def test_interactive_cli(test_documents, test_knowledge_base_name, llm, mock_temp_dir, monkeypatch):
+
+def test_interactive_cli(
+    test_documents, test_knowledge_base_name, llm, mock_temp_dir, monkeypatch
+):
     """Test the interactive CLI."""
     os.environ["KNOWLEDGE_BASE_DIR"] = mock_temp_dir
     setup_rag(test_documents, test_knowledge_base_name, llm=llm)
     monkeypatch.setattr("builtins.input", lambda _: "exit")
     interactive_cli()
+
 
 def test_rag_query(test_documents, test_knowledge_base_name, llm, mock_temp_dir):
     """Test querying the RAG system."""

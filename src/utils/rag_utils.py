@@ -11,7 +11,6 @@ import os
 import shutil
 import time
 import sys
-import logging
 from typing import List, Optional
 
 from tqdm import tqdm
@@ -27,6 +26,7 @@ from src.utils.logger import get_logger
 logger = get_logger()
 
 KNOWLEDGE_BASE_DIR = "knowledges"
+
 
 def _create_qa_chain(retriever, llm):
     """Creates a RetrievalQA chain with the given retriever and LLM model.
@@ -56,7 +56,9 @@ def _create_qa_chain(retriever, llm):
     return qa_chain
 
 
-def setup_rag(documents: List[Document], knowledge_base_name: str, llm = None) -> RetrievalQA:
+def setup_rag(
+    documents: List[Document], knowledge_base_name: str, llm=None
+) -> RetrievalQA:
     """Sets up the RAG system with the given documents and saves the vector store to disk.
 
     Args:
@@ -79,7 +81,9 @@ def setup_rag(documents: List[Document], knowledge_base_name: str, llm = None) -
     # Create vector store
     print(f"Creating vector store for '{knowledge_base_name}'...")
     logger.info(f"Creating vector store for '{knowledge_base_name}'.")
-    vectorstore = Chroma(persist_directory=persist_directory, embedding_function=embeddings)
+    vectorstore = Chroma(
+        persist_directory=persist_directory, embedding_function=embeddings
+    )
 
     logger.info(f"Starting embedding process for '{knowledge_base_name}'.")
     with tqdm(total=len(documents), desc="Embedding data") as pbar:
@@ -88,10 +92,8 @@ def setup_rag(documents: List[Document], knowledge_base_name: str, llm = None) -
             pbar.update(1)
     logger.info(f"Embedding process for '{knowledge_base_name}' completed.")
 
-
     print(f"Vector store for '{knowledge_base_name}' created successfully.")
     logger.info(f"Vector store for '{knowledge_base_name}' created successfully.")
-
 
     # Create retriever
     retriever = vectorstore.as_retriever()
@@ -119,7 +121,9 @@ def list_knowledge_bases() -> List[str]:
 
     # List all directories in knowledges/
     knowledge_bases = [
-        d for d in os.listdir(KNOWLEDGE_BASE_DIR) if os.path.isdir(os.path.join(KNOWLEDGE_BASE_DIR,d))
+        d
+        for d in os.listdir(KNOWLEDGE_BASE_DIR)
+        if os.path.isdir(os.path.join(KNOWLEDGE_BASE_DIR, d))
     ]
     logger.info(f"Found knowledge bases: {knowledge_bases}")
     return knowledge_bases
@@ -174,7 +178,6 @@ def load_rag_chain(knowledge_base_name: str, llm=None) -> Optional[RetrievalQA]:
     embeddings = get_embedding_model()
     logger.debug(f"Embedding model: {embeddings}")
 
-
     # Load vector store
     vectorstore = Chroma(
         persist_directory=persist_directory, embedding_function=embeddings
@@ -217,7 +220,9 @@ def interactive_cli() -> None:
                 print("Invalid selection.")
                 logger.warning(f"Invalid knowledge base selection: {selected}")
                 return
-            logger.info(f"User selected knowledge base: {knowledge_bases[selected - 1]}")
+            logger.info(
+                f"User selected knowledge base: {knowledge_bases[selected - 1]}"
+            )
         except ValueError:
             print("Invalid input. Please enter a number.")
             logger.error("Invalid input for knowledge base selection.")

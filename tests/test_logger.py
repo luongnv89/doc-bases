@@ -4,6 +4,7 @@ import logging
 import pytest
 from src.utils.logger import setup_logger, get_logger, toggle_logs, LOG_FILE
 
+
 # Fixtures
 @pytest.fixture
 def cleanup_log_file():
@@ -12,10 +13,12 @@ def cleanup_log_file():
     if os.path.exists(LOG_FILE):
         os.remove(LOG_FILE)
 
+
 @pytest.fixture
 def logger():
     """Fixture to set up and return the logger."""
     return setup_logger()
+
 
 # Tests
 def test_setup_logger(logger, cleanup_log_file):
@@ -25,10 +28,12 @@ def test_setup_logger(logger, cleanup_log_file):
     assert isinstance(logger.handlers[0], logging.FileHandler)
     assert isinstance(logger.handlers[1], logging.StreamHandler)
 
+
 def test_get_logger(logger, cleanup_log_file):
     """Test that get_logger returns the same logger instance."""
     logger_from_get = get_logger()
     assert logger is logger_from_get
+
 
 def test_toggle_logs(logger, cleanup_log_file, capsys):
     """Test that toggle_logs correctly toggles the logging level."""
@@ -47,6 +52,7 @@ def test_toggle_logs(logger, cleanup_log_file, capsys):
     captured = capsys.readouterr()
     assert "Logging is now enabled." in captured.out
 
+
 def test_logging_messages(logger, cleanup_log_file, capsys):
     """Test that log messages are correctly written to the log file and console."""
     # Log a message
@@ -61,6 +67,7 @@ def test_logging_messages(logger, cleanup_log_file, capsys):
     with open(LOG_FILE, "r") as log_file:
         log_content = log_file.read()
         assert test_message in log_content
+
 
 def test_logger_handlers_not_duplicated(logger, cleanup_log_file):
     """Test that handlers are not duplicated when setup_logger is called multiple times."""
