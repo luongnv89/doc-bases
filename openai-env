@@ -1,0 +1,5 @@
+LLM_PROVIDER=openai
+LLM_MODEL=gpt-3.5-turbo
+EMB_PROVIDER=openai
+EMB_MODEL=text-embedding-3-small
+OPENAI_API_KEY=

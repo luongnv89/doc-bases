@@ -1,0 +1,6 @@
+LLM_PROVIDER=ollama
+LLM_MODEL=llama3.2
+LLM_API_BASE=http://localhost:11434
+EMB_PROVIDER=ollama
+EMB_MODEL=nomic-embed-text
+EMB_API_BASE=http://localhost:11434
