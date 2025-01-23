@@ -1,4 +1,3 @@
-# src/utils/rag_utils.py
 """
 This module provides utility functions for setting up and interacting with a
 Retrieval-Augmented Generation (RAG) system. It includes functionalities for
@@ -10,20 +9,26 @@ the RAG system.
 import os
 import shutil
 import time
-import sys
 from typing import List, Optional
 
 from tqdm import tqdm
+from rich.console import Console
+from rich.panel import Panel
+from rich.live import Live
+from rich.spinner import Spinner
 from langchain_core.prompts import PromptTemplate
 from langchain.chains import RetrievalQA
 from langchain_chroma import Chroma
 from langchain.schema import Document
 from src.models.llm import get_llm_model
 from src.models.embeddings import get_embedding_model
-from src.utils.logger import get_logger
+from src.utils.logger import get_logger, custom_theme  # Import custom_theme
 
 # Setup logging
 logger = get_logger()
+
+# Initialize rich console with custom_theme
+console = Console(theme=custom_theme)
 
 KNOWLEDGE_BASE_DIR = "knowledges"
 
@@ -79,7 +84,7 @@ def setup_rag(
     logger.debug(f"Embedding model: {embeddings}")
 
     # Create vector store
-    print(f"Creating vector store for '{knowledge_base_name}'...")
+    console.print(f"[header]Creating vector store for '{knowledge_base_name}'...[/header]")
     logger.info(f"Creating vector store for '{knowledge_base_name}'.")
     vectorstore = Chroma(
         persist_directory=persist_directory, embedding_function=embeddings
@@ -92,7 +97,7 @@ def setup_rag(
             pbar.update(1)
     logger.info(f"Embedding process for '{knowledge_base_name}' completed.")
 
-    print(f"Vector store for '{knowledge_base_name}' created successfully.")
+    console.print(f"[success]Vector store for '{knowledge_base_name}' created successfully.[/success]")
     logger.info(f"Vector store for '{knowledge_base_name}' created successfully.")
 
     # Create retriever
@@ -139,20 +144,11 @@ def delete_knowledge_base(knowledge_base_name: str) -> None:
     persist_directory = os.path.join(KNOWLEDGE_BASE_DIR, knowledge_base_name)
     if os.path.exists(persist_directory):
         shutil.rmtree(persist_directory)
-        print(f"Deleted knowledge base: {knowledge_base_name}")
+        console.print(f"[error]Deleted knowledge base: {knowledge_base_name}[/error]")
         logger.info(f"Deleted knowledge base: {knowledge_base_name}")
     else:
-        print(f"Knowledge base '{knowledge_base_name}' does not exist.")
+        console.print(f"[warning]Knowledge base '{knowledge_base_name}' does not exist.[/warning]")
         logger.warning(f"Knowledge base '{knowledge_base_name}' does not exist.")
-
-
-def thinking_animation() -> None:
-    """Displays a thinking animation with dots."""
-    for i in range(3):
-        sys.stdout.write("\rgithub_rag is thinking" + "." * (i + 1))
-        sys.stdout.flush()
-        time.sleep(0.5)
-    sys.stdout.write("\r" + " " * 30 + "\r")  # Clear the line
 
 
 def load_rag_chain(knowledge_base_name: str, llm=None) -> Optional[RetrievalQA]:
@@ -162,7 +158,6 @@ def load_rag_chain(knowledge_base_name: str, llm=None) -> Optional[RetrievalQA]:
         knowledge_base_name (str): Name of the knowledge base to load.
         llm (LLM, optional): LLM model to be used. if None, will use the default model
 
-
     Returns:
         RetrievalQA: The configured RetrievalQA chain, or None if loading fails.
     """
@@ -170,7 +165,7 @@ def load_rag_chain(knowledge_base_name: str, llm=None) -> Optional[RetrievalQA]:
     persist_directory = os.path.join(KNOWLEDGE_BASE_DIR, knowledge_base_name)
 
     if not os.path.exists(persist_directory):
-        print(f"Knowledge base '{knowledge_base_name}' not found.")
+        console.print(f"[error]Knowledge base '{knowledge_base_name}' not found.[/error]")
         logger.warning(f"Knowledge base '{knowledge_base_name}' not found.")
         return None
 
@@ -201,7 +196,7 @@ def interactive_cli() -> None:
     logger.info("Starting interactive CLI.")
     knowledge_bases = list_knowledge_bases()
     if not knowledge_bases:
-        print("No knowledge bases available. Please set up a RAG system first.")
+        console.print("[error]No knowledge bases available. Please set up a RAG system first.[/error]")
         logger.warning("No knowledge bases available for interactive CLI.")
         return
 
@@ -210,21 +205,21 @@ def interactive_cli() -> None:
         knowledge_base_name = knowledge_bases[0]
         logger.info(f"Only one knowledge base found, using: {knowledge_base_name}")
     else:
-        print("Available Knowledge Bases:")
+        console.print("[header]Available Knowledge Bases:[/header]")
         for i, kb in enumerate(knowledge_bases, 1):
-            print(f"{i}. {kb}")
+            console.print(f"{i}. {kb}")
 
         try:
             selected = int(input("Select a knowledge base by number: ").strip())
             if selected < 1 or selected > len(knowledge_bases):
-                print("Invalid selection.")
+                console.print("[error]Invalid selection.[/error]")
                 logger.warning(f"Invalid knowledge base selection: {selected}")
                 return
             logger.info(
                 f"User selected knowledge base: {knowledge_bases[selected - 1]}"
             )
         except ValueError:
-            print("Invalid input. Please enter a number.")
+            console.print("[error]Invalid input. Please enter a number.[/error]")
             logger.error("Invalid input for knowledge base selection.")
             return
 
@@ -239,20 +234,22 @@ def interactive_cli() -> None:
         logger.error("Failed to load QA chain for interactive CLI.")
         return
 
+    console.print("[success]Interactive CLI started. Type 'exit' to quit.[/success]")
     while True:
-        query = input("\n\033[94mYou:\033[0m ")  # Blue color for user input
+        query = console.input("[info]You: [/info]")
         if query.lower() == "exit":
             logger.info("Exiting interactive CLI.")
             break
 
         # Show thinking animation
-        thinking_animation()
-
-        # Get the answer
-        result = qa_chain.invoke({"query": query})
-        logger.info(f"Query: {query}, Result: {result}")
+        with Live(Spinner("dots"), refresh_per_second=20) as live:
+            time.sleep(1)  # Simulate thinking time
+            result = qa_chain.invoke({"query": query})
+            logger.info(f"Query: {query}, Result: {result}")
 
         # Display the answer
-        print(
-            f"\033[92mgithub_rag:\033[0m {result['result']}"
-        )  # Green color for AI response
+        console.print(Panel.fit(
+            result['result'],
+            title="[success]DocBases[/success]",
+            border_style="green",
+        ))

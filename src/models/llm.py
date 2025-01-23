@@ -1,21 +1,23 @@
-# src/models/llm.py
 """
 This module provides functions for getting LLM models.
 """
 import os
 from typing import Optional
 from dotenv import load_dotenv
-
+from rich.console import Console
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_openai import ChatOpenAI
 from langchain_groq import ChatGroq
 from langchain_ollama import OllamaLLM
 from langchain_core.language_models import LLM
-from src.utils.logger import get_logger
+from src.utils.logger import get_logger, custom_theme  # Import custom_theme
 
 # Load environment variables from .env file
 load_dotenv()
 logger = get_logger()
+
+# Initialize rich console with custom_theme
+console = Console(theme=custom_theme)
 
 
 def get_llm_model(
@@ -42,68 +44,77 @@ def get_llm_model(
     if not provider:
         provider = os.getenv("LLM_PROVIDER")
         if not provider:
+            console.print("[error]LLM_PROVIDER not found in environment variables.[/error]")
             raise ValueError("LLM_PROVIDER not found in environment variables.")
     if not model:
         model = os.getenv("LLM_MODEL")
         if not model:
+            console.print("[error]LLM_MODEL not found in environment variables.[/error]")
             raise ValueError("LLM_MODEL not found in environment variables.")
     if not api_base:
         api_base = os.getenv("LLM_API_BASE")
 
-    logger.info(f"Getting LLM Model: Provider={provider}, Model={model}")
+    console.print(f"[info]Getting LLM Model: Provider={provider}, Model={model}[/info]")
     if api_key:
-        logger.info("User provided api key")
+        console.print("[info]User provided API key[/info]")
     if api_base:
-        logger.info(f"Using custom API base: {api_base}")
+        console.print(f"[info]Using custom API base: {api_base}[/info]")
 
     try:
         if provider == "google":
             if not api_key:
                 api_key = os.getenv("GOOGLE_API_KEY")
-                logger.info("Getting GOOGLE_API_KEY from env")
+                console.print("[info]Getting GOOGLE_API_KEY from env[/info]")
             if not api_key:
+                console.print("[error]GOOGLE_API_KEY not found in environment variables or user input.[/error]")
                 raise ValueError(
                     "GOOGLE_API_KEY not found in environment variables or user input."
                 )
-            logger.info("Using Google GenAI Model")
+            console.print("[success]Using Google GenAI Model[/success]")
             return ChatGoogleGenerativeAI(model=model, google_api_key=api_key)
 
         elif provider == "openai":
             if not api_key:
                 api_key = os.getenv("OPENAI_API_KEY")
-                logger.info("Getting OPENAI_API_KEY from env")
+                console.print("[info]Getting OPENAI_API_KEY from env[/info]")
             if not api_key:
+                console.print("[error]OPENAI_API_KEY not found in environment variables or user input.[/error]")
                 raise ValueError(
                     "OPENAI_API_KEY not found in environment variables or user input."
                 )
-            logger.info("Using OpenAI Model")
+            console.print("[success]Using OpenAI Model[/success]")
             return ChatOpenAI(model=model, openai_api_key=api_key, base_url=api_base)
 
         elif provider == "grok":
             if not api_key:
                 api_key = os.getenv("GROQ_API_KEY")
-                logger.info("Getting GROQ_API_KEY from env")
+                console.print("[info]Getting GROQ_API_KEY from env[/info]")
             if not api_key:
+                console.print("[error]GROQ_API_KEY not found in environment variables or user input.[/error]")
                 raise ValueError(
                     "GROQ_API_KEY not found in environment variables or user input."
                 )
-            logger.info("Using Groq Model")
+            console.print("[success]Using Groq Model[/success]")
             return ChatGroq(api_key=api_key, model=model)
+
         elif provider == "ollama":
-            logger.info("Using Ollama Model")
+            console.print("[success]Using Ollama Model[/success]")
             return OllamaLLM(model=model, base_url=api_base)
+
         else:
             if not api_key:
                 api_key_env_key = f"{provider.upper()}_API_KEY"
                 api_key = os.getenv(api_key_env_key)
-                logger.info(f"Getting {api_key_env_key} from env")
+                console.print(f"[info]Getting {api_key_env_key} from env[/info]")
             if api_key:
-                logger.info(f"Using Custom Model provider {provider}")
+                console.print(f"[success]Using Custom Model provider {provider}[/success]")
                 return ChatOpenAI(
                     model=model, openai_api_key=api_key, base_url=api_base
                 )
             else:
-                raise ValueError(f"Provider '{provider}' not supported and no api_key")
+                console.print(f"[error]Provider '{provider}' not supported and no API key provided.[/error]")
+                raise ValueError(f"Provider '{provider}' not supported and no API key provided.")
+
     except Exception as e:
-        logger.error(f"Error getting LLM model: {e}")
+        console.print(f"[error]Error getting LLM model: {e}[/error]")
         raise
