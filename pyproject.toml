@@ -1,0 +1,64 @@
+[build-system]
+requires = ["setuptools>=61.0.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "github-rag"
+version = "0.1.0"
+description = "A Retrieval-Augmented Generation (RAG) system for querying GitHub repositories."
+authors = [
+    { name = "Luong NGUYEN", email = "luongnv89@gmail.com" }
+]
+license = { file = "LICENSE" }
+readme = "README.md"
+requires-python = ">=3.9"
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+]
+
+dependencies = [
+    "python-dotenv>=1.0.0",
+    "PyGithub>=2.0.0",
+    "langchain-core>=0.1.0",
+    "langchain>=0.1.0",
+    "langchain-chroma>=0.1.0",
+    "langchain-community>=0.1.0",
+    "langchain-google-genai>=0.1.0",
+    "langchain-openai>=0.1.0",
+    "langchain-ollama>=0.1.0",
+    "chromadb>=0.4.0",
+    "ollama>=0.1.0",
+    "openai>=1.0.0",
+    "google-generativeai>=0.3.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "black>=23.0.0",
+    "flake8>=6.0.0",
+    "pytest>=7.0.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/luongnv89/github-rag"
+Repository = "https://github.com/luongnv89/github-rag"
+Issues = "https://github.com/luongnv89/github-rag/issues"
+
+[tool.black]
+line-length = 88
+target-version = ['py39', 'py310', 'py311']
+
+[tool.flake8]
+max-line-length = 88
+ignore = ["E203", "E266", "E501", "W503"]
+exclude = [".git", "__pycache__", "build", "dist", "venv"]
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+addopts = "-v"
+testpaths = ["tests"]

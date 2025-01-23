@@ -1,0 +1,41 @@
+name: Run Tests
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3  # Check out the repository
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.9"  # Use Python 3.9
+
+      - name: Install Poetry
+        run: |
+          pip install poetry  # Install Poetry using pip
+
+      - name: Cache Poetry virtualenv
+        id: cache-poetry
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pypoetry/virtualenvs
+          key: poetry-${{ runner.os }}-${{ hashFiles('poetry.lock') }}
+          restore-keys: |
+            poetry-${{ runner.os }}-
+
+      - name: Install dependencies
+        run: |
+          poetry install --no-root  # Install dependencies without installing the root package
+
+      - name: Run tests
+        run: |
+          poetry run pytest tests/  # Run tests using Poetry

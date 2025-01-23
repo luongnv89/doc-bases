@@ -1,0 +1,21 @@
+# Core dependencies
+python-dotenv>=1.0.0
+PyGithub>=2.0.0
+langchain-core>=0.1.0
+langchain>=0.1.0
+langchain-chroma>=0.1.0
+langchain-community>=0.1.0
+langchain-google-genai>=0.1.0
+langchain-openai>=0.1.0
+langchain-ollama>=0.1.0
+
+# Additional dependencies
+chromadb>=0.4.0
+ollama>=0.1.0
+openai>=1.0.0
+google-generativeai>=0.3.0
+
+# Development dependencies (optional)
+pytest>=7.0.0
+black>=23.0.0
+flake8>=6.0.0
