@@ -263,7 +263,7 @@ def interactive_cli() -> None:
         console.print(
             Panel.fit(
                 markdown_content,
-                title="[success]DocBases[/success]",
+                title=f"[success]DocBases ({knowledge_base_name})[/success]",
                 border_style="green",
             )
         )
