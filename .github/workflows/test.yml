@@ -35,7 +35,7 @@ jobs:
 
       - name: Lint and Format
         run: |
-            pip install black flake8  # Install black and flake8
+            pip install black flake8 pytest  # Install black and flake8
             black src/ tests/  # Format code using black
             flake8 src/ tests/  # Lint code using flake8
 
