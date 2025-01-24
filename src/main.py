@@ -2,7 +2,6 @@
 import os
 from dotenv import load_dotenv
 from rich.console import Console
-from rich.theme import Theme
 from rich.panel import Panel
 from rich.table import Table
 from src.utils.document_loader import DocumentLoader
@@ -46,7 +45,9 @@ def print_welcome_slogan():
 
 def cli_helper():
     """Displays a help message explaining how to use the script."""
-    table = Table(title="[header]DocBases CLI Helper[/header]", border_style="bold cyan")
+    table = Table(
+        title="[header]DocBases CLI Helper[/header]", border_style="bold cyan"
+    )
     table.add_column("Command", style="info")
     table.add_column("Description", style="info")
 
@@ -54,7 +55,9 @@ def cli_helper():
     table.add_row("1", "Add Knowledge Base: Setup a new knowledge base.")
     table.add_row("2", "List Knowledge Bases: List all available knowledge bases.")
     table.add_row("3", "Delete Knowledge Base: Delete a specific knowledge base.")
-    table.add_row("4", "Interactive CLI: Start an interactive CLI for querying the DocBases.")
+    table.add_row(
+        "4", "Interactive CLI: Start an interactive CLI for querying the DocBases."
+    )
     table.add_row("5", "Toggle Logs: Turn on or off all logs.")
     table.add_row("6", "Exit: Exit the script.")
 
@@ -64,7 +67,9 @@ def cli_helper():
 def setup_rag_cli(doc_loader: DocumentLoader):
     """Prompts the user for the source of documents to add a new Knowledge Database."""
     logger.info("Add new Knowledge Database CLI")
-    console.print("\n[header]Choose the source for adding a new Knowledge Database:[/header]")
+    console.print(
+        "\n[header]Choose the source for adding a new Knowledge Database:[/header]"
+    )
     console.print("0. Back to Main Menu")
     console.print("1. Repository URL")
     console.print("2. Local File")
@@ -78,7 +83,9 @@ def setup_rag_cli(doc_loader: DocumentLoader):
         source_choice = int(input("Enter your choice (0-7): ").strip())
         logger.info(f"User chose source type: {source_choice}")
     except ValueError:
-        console.print("[error]Invalid input. Please enter a number between 0 and 7.[/error]")
+        console.print(
+            "[error]Invalid input. Please enter a number between 0 and 7.[/error]"
+        )
         logger.error("Invalid input for source choice.")
         return
 
@@ -123,14 +130,18 @@ def setup_rag_cli(doc_loader: DocumentLoader):
         return
 
     if not docs:
-        console.print("[error]Failed to load document from the specified source[/error]")
+        console.print(
+            "[error]Failed to load document from the specified source[/error]"
+        )
         logger.error("Failed to load document from the specified source")
         return
 
     knowledge_base_name = generate_knowledge_base_name(source_choice, input_str)
     logger.info(f"Generated knowledge base name: {knowledge_base_name}")
     if knowledge_base_name in list_knowledge_bases():
-        console.print(f"[warning]A knowledge base with the name '{knowledge_base_name}' already exists.[/warning]")
+        console.print(
+            f"[warning]A knowledge base with the name '{knowledge_base_name}' already exists.[/warning]"
+        )
         logger.warning(f"Knowledge base '{knowledge_base_name}' already exists.")
         choice = (
             input("Do you want to overwrite it (o), or cancel (c)? ").strip().lower()
@@ -149,7 +160,9 @@ def setup_rag_cli(doc_loader: DocumentLoader):
             elif source_choice == 5:
                 docs = doc_loader.load_documents_from_url(input_str, overwrite=True)
             else:
-                console.print("[warning]Overwriting is only supported for Repo and Downloaded Files[/warning]")
+                console.print(
+                    "[warning]Overwriting is only supported for Repo and Downloaded Files[/warning]"
+                )
                 logger.warning(
                     "Overwriting is only supported for Repo and Downloaded Files"
                 )
@@ -157,12 +170,16 @@ def setup_rag_cli(doc_loader: DocumentLoader):
 
             if docs:
                 setup_rag(docs, knowledge_base_name)
-                console.print("[success]Add a new Knowledge Database completed.[/success]")
+                console.print(
+                    "[success]Add a new Knowledge Database completed.[/success]"
+                )
                 logger.info(
                     f"Add a new Knowledge Database completed with overwrite option for '{knowledge_base_name}'."
                 )
             else:
-                console.print("[error]Failed to load documents with overwrite option[/error]")
+                console.print(
+                    "[error]Failed to load documents with overwrite option[/error]"
+                )
                 logger.error(
                     f"Failed to load documents with overwrite option for '{knowledge_base_name}'"
                 )
@@ -196,7 +213,9 @@ def main():
             action = int(input("Choose an action (0-6): ").strip())
             logger.info(f"User chose action: {action}")
         except ValueError:
-            console.print("[error]Invalid input. Please enter a number between 0 and 6.[/error]")
+            console.print(
+                "[error]Invalid input. Please enter a number between 0 and 6.[/error]"
+            )
             logger.error("Invalid action input.")
             continue
 
@@ -206,7 +225,10 @@ def main():
             setup_rag_cli(doc_loader)
         elif action == 2:
             knowledge_bases = list_knowledge_bases()
-            table = Table(title="[header]Available Knowledge Bases[/header]", border_style="bold cyan")
+            table = Table(
+                title="[header]Available Knowledge Bases[/header]",
+                border_style="bold cyan",
+            )
             table.add_column("Knowledge Base", style="info")
             for kb in knowledge_bases:
                 table.add_row(kb)
@@ -229,7 +251,9 @@ def main():
                 )
                 if choice in ["yes", "no"]:
                     break
-                console.print("[error]Invalid input. Please enter 'yes' or 'no'.[/error]")
+                console.print(
+                    "[error]Invalid input. Please enter 'yes' or 'no'.[/error]"
+                )
                 logger.warning("Invalid input for return to task list or exit")
             if choice == "no":
                 console.print("[success]Exiting...[/success]")
@@ -242,7 +266,9 @@ def main():
             logger.info("Exiting application.")
             break
         else:
-            console.print("[error]Invalid action. Please choose a number between 0 and 6.[/error]")
+            console.print(
+                "[error]Invalid action. Please choose a number between 0 and 6.[/error]"
+            )
             logger.warning(f"Invalid action: {action}")
 
 

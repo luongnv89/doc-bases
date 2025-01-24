@@ -100,7 +100,9 @@ class DocumentLoader:
         """
         repo_name = self._get_repo_name_from_url(repo_url)
         if not repo_name:
-            console.print("[error]Could not determine repository name from URL.[/error]")
+            console.print(
+                "[error]Could not determine repository name from URL.[/error]"
+            )
             return False
         if local_path is None:
             local_path = os.path.join(self.TEMP_DIR, repo_name)
@@ -110,20 +112,26 @@ class DocumentLoader:
             shutil.rmtree(local_path)
 
         try:
-            console.print(f"[info]Cloning repository from {repo_url} to {local_path}...[/info]")
+            console.print(
+                f"[info]Cloning repository from {repo_url} to {local_path}...[/info]"
+            )
             subprocess.run(
                 ["git", "clone", repo_url, local_path],
                 check=True,
                 capture_output=True,
                 text=True,
             )
-            console.print(f"[success]Repository cloned successfully to {local_path}[/success]")
+            console.print(
+                f"[success]Repository cloned successfully to {local_path}[/success]"
+            )
             return True
         except subprocess.CalledProcessError as e:
             console.print(f"[error]Error cloning repository: {e.stderr}[/error]")
             return False
         except Exception as e:
-            console.print(f"[error]An unexpected error occurred during cloning: {e}[/error]")
+            console.print(
+                f"[error]An unexpected error occurred during cloning: {e}[/error]"
+            )
             return False
 
     def _load_single_document(self, file_path: str) -> Optional[List[Document]]:
@@ -166,7 +174,9 @@ class DocumentLoader:
                 console.print(f"[info]Loading PowerPoint file: {file_path}[/info]")
                 return UnstructuredPowerPointLoader(file_path).load()
             else:
-                console.print(f"[warning]Unsupported file type: {mime_type} for {file_path}[/warning]")
+                console.print(
+                    f"[warning]Unsupported file type: {mime_type} for {file_path}[/warning]"
+                )
                 return None
         except Exception as e:
             console.print(f"[error]Error loading document {file_path}: {e}[/error]")
@@ -196,7 +206,11 @@ class DocumentLoader:
             gitignore_patterns = []
             if os.path.exists(gitignore_path):
                 with open(gitignore_path, "r") as f:
-                    gitignore_patterns = [line.strip() for line in f if line.strip() and not line.startswith("#")]
+                    gitignore_patterns = [
+                        line.strip()
+                        for line in f
+                        if line.strip() and not line.startswith("#")
+                    ]
 
             documents = []
             console.print(f"[info]Loading documents from {folder_path}...[/info]")
@@ -213,7 +227,10 @@ class DocumentLoader:
 
                     # Skip files that match .gitignore patterns
                     relative_path = os.path.relpath(file_path, folder_path)
-                    if any(fnmatch.fnmatch(relative_path, pattern) for pattern in gitignore_patterns):
+                    if any(
+                        fnmatch.fnmatch(relative_path, pattern)
+                        for pattern in gitignore_patterns
+                    ):
                         logger.debug(f"Skipping file due to .gitignore: {file_path}")
                         continue
 
@@ -250,7 +267,9 @@ class DocumentLoader:
                 chunk_size=self.chunk_size, chunk_overlap=self.chunk_overlap
             )
             split_documents = text_splitter.split_documents(documents)
-            console.print(f"[success]Successfully split documents into {len(split_documents)} chunks.[/success]")
+            console.print(
+                f"[success]Successfully split documents into {len(split_documents)} chunks.[/success]"
+            )
             return split_documents
         except Exception as e:
             console.print(f"[error]Error splitting documents: {e}[/error]")
@@ -305,7 +324,9 @@ class DocumentLoader:
         """
         repo_name = self._get_repo_name_from_url(repo_url)
         if not repo_name:
-            console.print("[error]Could not determine repository name from URL.[/error]")
+            console.print(
+                "[error]Could not determine repository name from URL.[/error]"
+            )
             return None
 
         local_path = os.path.join(self.TEMP_DIR, repo_name)
@@ -320,7 +341,9 @@ class DocumentLoader:
             return chunked_documents
 
         except Exception as e:
-            console.print(f"[error]An error occurred during repo processing: {e}[/error]")
+            console.print(
+                f"[error]An error occurred during repo processing: {e}[/error]"
+            )
             return None
         finally:
             if os.path.exists(local_path):
@@ -346,7 +369,9 @@ class DocumentLoader:
             os.remove(local_path)
 
         try:
-            console.print(f"[info]Downloading file from {url} to {local_path}...[/info]")
+            console.print(
+                f"[info]Downloading file from {url} to {local_path}...[/info]"
+            )
             response = requests.get(url, stream=True)
             response.raise_for_status()  # Raise an exception for bad status codes
 
@@ -365,13 +390,17 @@ class DocumentLoader:
                 console.print("[warning]Download incomplete[/warning]")
                 return False
 
-            console.print(f"[success]Downloaded file successfully to {local_path}[/success]")
+            console.print(
+                f"[success]Downloaded file successfully to {local_path}[/success]"
+            )
             return True
         except requests.exceptions.RequestException as e:
             console.print(f"[error]Error downloading file: {e}[/error]")
             return False
         except Exception as e:
-            console.print(f"[error]An unexpected error occurred during downloading: {e}[/error]")
+            console.print(
+                f"[error]An unexpected error occurred during downloading: {e}[/error]"
+            )
             return False
 
     def _scrape_website(self, url: str) -> Optional[Document]:
@@ -392,13 +421,17 @@ class DocumentLoader:
 
             soup = BeautifulSoup(response.content, "html.parser")
             text_content = soup.get_text(separator=" ", strip=True)
-            console.print("[success]Successfully scraped content from the web page[/success]")
+            console.print(
+                "[success]Successfully scraped content from the web page[/success]"
+            )
             return Document(page_content=text_content, metadata={"source": url})
         except requests.exceptions.RequestException as e:
             console.print(f"[error]Error during the web scraping: {e}[/error]")
             return None
         except Exception as e:
-            console.print(f"[error]An unexpected error occurred during scraping: {e}[/error]")
+            console.print(
+                f"[error]An unexpected error occurred during scraping: {e}[/error]"
+            )
             return None
 
     def load_documents_from_url(
@@ -418,12 +451,16 @@ class DocumentLoader:
         try:
             local_file_name = os.path.basename(file_url)
             if not self._download_file(file_url, local_file_name, overwrite):
-                console.print(f"[error]Failed to download file from url: {file_url}[/error]")
+                console.print(
+                    f"[error]Failed to download file from url: {file_url}[/error]"
+                )
                 return None
             local_path = os.path.join(self.TEMP_DIR, local_file_name)
             return self._load_single_document(local_path)
         except Exception as e:
-            console.print(f"[error]An error occurred during downloading or processing documents: {e}[/error]")
+            console.print(
+                f"[error]An error occurred during downloading or processing documents: {e}[/error]"
+            )
             return None
         finally:
             if os.path.exists(local_path):
@@ -445,7 +482,9 @@ class DocumentLoader:
         try:
             return self._load_text_folder_to_chunk(folder_path)
         except Exception as e:
-            console.print(f"[error]An error occurred during loading or processing documents: {e}[/error]")
+            console.print(
+                f"[error]An error occurred during loading or processing documents: {e}[/error]"
+            )
             return None
 
     def load_documents_from_file(self, file_path: str) -> Optional[List[Document]]:
@@ -466,7 +505,9 @@ class DocumentLoader:
                 return None
             return self._split_documents_to_chunk(documents)
         except Exception as e:
-            console.print(f"[error]An error occurred during loading or processing document: {e}[/error]")
+            console.print(
+                f"[error]An error occurred during loading or processing document: {e}[/error]"
+            )
             return None
 
     def load_documents_from_repo(
@@ -486,7 +527,9 @@ class DocumentLoader:
         try:
             return self._clone_and_parse_repo(repo_url, overwrite)
         except Exception as e:
-            console.print(f"[error]An error occurred during loading or processing the repo: {e}[/error]")
+            console.print(
+                f"[error]An error occurred during loading or processing the repo: {e}[/error]"
+            )
             return None
 
     def load_documents_from_website(self, url: str) -> Optional[List[Document]]:
@@ -507,5 +550,7 @@ class DocumentLoader:
                 return None
             return self._split_documents_to_chunk([scraped_document])
         except Exception as e:
-            console.print(f"[error]An error occurred during scraping or processing the website: {e}[/error]")
+            console.print(
+                f"[error]An error occurred during scraping or processing the website: {e}[/error]"
+            )
             return None

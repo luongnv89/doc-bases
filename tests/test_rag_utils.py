@@ -9,7 +9,7 @@ from src.utils.rag_utils import (
     list_knowledge_bases,
     delete_knowledge_base,
     load_rag_chain,
-    interactive_cli
+    interactive_cli,
 )
 from src.models.llm import get_llm_model
 

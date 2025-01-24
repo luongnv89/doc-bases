@@ -16,6 +16,7 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.live import Live
 from rich.spinner import Spinner
+from rich.markdown import Markdown
 from langchain_core.prompts import PromptTemplate
 from langchain.chains import RetrievalQA
 from langchain_chroma import Chroma
@@ -84,7 +85,9 @@ def setup_rag(
     logger.debug(f"Embedding model: {embeddings}")
 
     # Create vector store
-    console.print(f"[header]Creating vector store for '{knowledge_base_name}'...[/header]")
+    console.print(
+        f"[header]Creating vector store for '{knowledge_base_name}'...[/header]"
+    )
     logger.info(f"Creating vector store for '{knowledge_base_name}'.")
     vectorstore = Chroma(
         persist_directory=persist_directory, embedding_function=embeddings
@@ -97,7 +100,9 @@ def setup_rag(
             pbar.update(1)
     logger.info(f"Embedding process for '{knowledge_base_name}' completed.")
 
-    console.print(f"[success]Vector store for '{knowledge_base_name}' created successfully.[/success]")
+    console.print(
+        f"[success]Vector store for '{knowledge_base_name}' created successfully.[/success]"
+    )
     logger.info(f"Vector store for '{knowledge_base_name}' created successfully.")
 
     # Create retriever
@@ -147,7 +152,9 @@ def delete_knowledge_base(knowledge_base_name: str) -> None:
         console.print(f"[error]Deleted knowledge base: {knowledge_base_name}[/error]")
         logger.info(f"Deleted knowledge base: {knowledge_base_name}")
     else:
-        console.print(f"[warning]Knowledge base '{knowledge_base_name}' does not exist.[/warning]")
+        console.print(
+            f"[warning]Knowledge base '{knowledge_base_name}' does not exist.[/warning]"
+        )
         logger.warning(f"Knowledge base '{knowledge_base_name}' does not exist.")
 
 
@@ -165,7 +172,9 @@ def load_rag_chain(knowledge_base_name: str, llm=None) -> Optional[RetrievalQA]:
     persist_directory = os.path.join(KNOWLEDGE_BASE_DIR, knowledge_base_name)
 
     if not os.path.exists(persist_directory):
-        console.print(f"[error]Knowledge base '{knowledge_base_name}' not found.[/error]")
+        console.print(
+            f"[error]Knowledge base '{knowledge_base_name}' not found.[/error]"
+        )
         logger.warning(f"Knowledge base '{knowledge_base_name}' not found.")
         return None
 
@@ -196,7 +205,9 @@ def interactive_cli() -> None:
     logger.info("Starting interactive CLI.")
     knowledge_bases = list_knowledge_bases()
     if not knowledge_bases:
-        console.print("[error]No knowledge bases available. Please set up a RAG system first.[/error]")
+        console.print(
+            "[error]No knowledge bases available. Please set up a RAG system first.[/error]"
+        )
         logger.warning("No knowledge bases available for interactive CLI.")
         return
 
@@ -242,14 +253,17 @@ def interactive_cli() -> None:
             break
 
         # Show thinking animation
-        with Live(Spinner("dots"), refresh_per_second=20) as live:
+        with Live(Spinner("dots"), refresh_per_second=20):
             time.sleep(1)  # Simulate thinking time
             result = qa_chain.invoke({"query": query})
             logger.info(f"Query: {query}, Result: {result}")
 
         # Display the answer
-        console.print(Panel.fit(
-            result['result'],
-            title="[success]DocBases[/success]",
-            border_style="green",
-        ))
+        markdown_content = Markdown(result["result"])
+        console.print(
+            Panel.fit(
+                markdown_content,
+                title="[success]DocBases[/success]",
+                border_style="green",
+            )
+        )
