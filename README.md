@@ -3,6 +3,7 @@
 DocBases is a powerful **Retrieval-Augmented Generation (RAG)** system designed to help you query documents from various sources, including GitHub repositories, local files, folders, websites, and downloadable files. With an intuitive CLI, you can easily set up, manage, and interact with knowledge bases to retrieve information using natural language queries.
 
 ---
+![DocBases Screenshot](screenshot.png)
 
 ## Features
 
