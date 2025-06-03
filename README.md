@@ -7,6 +7,8 @@ DocBases is a powerful **Retrieval-Augmented Generation (RAG)** system designed 
 
 ## Features
 
+- **Agentic RAG (Retrieval-Augmented Generation)**: Uses an agent that can reason over multiple steps, decide when to retrieve, and chain tool calls for complex queries.
+- **Multi-Turn Conversation Memory**: Each session maintains full conversational context, allowing for follow-up questions and context-aware answers.
 - **Multiple Document Sources**: Load documents from:
   - GitHub repositories
   - Local files
@@ -19,6 +21,8 @@ DocBases is a powerful **Retrieval-Augmented Generation (RAG)** system designed 
   - Delete knowledge bases you no longer need.
 - **Interactive CLI**:
   - Query your knowledge bases using natural language.
+  - Supports session IDs for persistent, resumable conversations.
+  - Multi-step reasoning and iterative tool use.
   - Seamlessly switch between tasks or exit the app.
 - **Logging**:
   - Toggle logs on or off for debugging and monitoring.

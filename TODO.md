@@ -1,0 +1,6 @@
+- [ ] : more formalize way to interact in RAG_CLI mode
+- [ ] : exit/ -> quit
+- [ ] : help/ -> show help with command + example
+- [ ] : actions for a specific answer: export/ , copy/ , regenerate/
+- [ ] : action for a conversation: export-all/, copy-all/
+- [ ] : prompt template useful for working with document

@@ -11,7 +11,7 @@ from src.utils.rag_utils import (
     delete_knowledge_base,
     interactive_cli,
 )
-from utils.utilities import get_version_from_git, generate_knowledge_base_name
+from src.utils.utilities import get_version_from_git, generate_knowledge_base_name
 from src.utils.logger import setup_logger, toggle_logs, custom_theme
 
 # Load environment variables from .env file
