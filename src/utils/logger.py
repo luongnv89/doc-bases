@@ -2,8 +2,9 @@
 import logging
 import os
 from datetime import datetime
-from rich.logging import RichHandler
+
 from rich.console import Console
+from rich.logging import RichHandler
 from rich.theme import Theme
 
 # Define a custom theme for rich console output
@@ -27,9 +28,7 @@ if not os.path.exists(LOGS_DIR):
     console.print(f"[info]Created logs directory: {LOGS_DIR}[/info]")
 
 # Create a log file with a timestamp in the filename
-LOG_FILE = os.path.join(
-    LOGS_DIR, f"doc_bases_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
-)
+LOG_FILE = os.path.join(LOGS_DIR, f"doc_bases_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log")
 
 
 def setup_logger(level=logging.INFO):

@@ -1,8 +1,10 @@
 # tests/test_utils.py
-import pytest
 from unittest.mock import patch
+
+import pytest
+
 from src.utils.logger import get_logger
-from src.utils.utilities import get_version_from_git, generate_knowledge_base_name
+from src.utils.utilities import generate_knowledge_base_name, get_version_from_git
 
 # Constants
 TEST_GIT_HASH = "abc1234"
@@ -39,21 +41,15 @@ def test_get_version_from_git_success(mock_git, logger):
     assert version == f"Version: {TEST_GIT_HASH}"
 
 
-def test_get_version_from_git_failure_fallback_version_file(
-    mock_git, mock_version_file, logger
-):
+def test_get_version_from_git_failure_fallback_version_file(mock_git, mock_version_file, logger):
     """Test get_version_from_git with Git failure and fallback to VERSION file."""
     mock_git.side_effect = Exception("Git error")
-    mock_version_file.return_value.__enter__.return_value.read.return_value = (
-        TEST_VERSION_FILE_CONTENT
-    )
+    mock_version_file.return_value.__enter__.return_value.read.return_value = TEST_VERSION_FILE_CONTENT
     version = get_version_from_git()
     assert version == f"Version: {TEST_VERSION_FILE_CONTENT}"
 
 
-def test_get_version_from_git_failure_fallback_hardcoded(
-    mock_git, mock_version_file, logger
-):
+def test_get_version_from_git_failure_fallback_hardcoded(mock_git, mock_version_file, logger):
     """Test get_version_from_git with Git failure and fallback to hardcoded version."""
     mock_git.side_effect = Exception("Git error")
     mock_version_file.side_effect = FileNotFoundError

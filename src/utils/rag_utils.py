@@ -9,27 +9,24 @@ the RAG system.
 import os
 import shutil
 import time
-from typing import List, Optional
+import uuid
+from typing import List
 
-from tqdm import tqdm
-from rich.console import Console
-from rich.panel import Panel
-from rich.live import Live
-from rich.spinner import Spinner
-from rich.markdown import Markdown
-from langchain_core.prompts import PromptTemplate
-from langchain.chains import RetrievalQA
-from langchain_chroma import Chroma
 from langchain.schema import Document
-from src.models.llm import get_llm_model
-from src.models.embeddings import get_embedding_model
-from src.utils.logger import get_logger, custom_theme  # Import custom_theme
-from langgraph.graph import START, StateGraph
-from typing_extensions import TypedDict, List as TypingList
-from langgraph.prebuilt import create_react_agent
+from langchain_chroma import Chroma
 from langchain_core.tools import tool
 from langgraph.checkpoint.memory import MemorySaver
-import uuid
+from langgraph.prebuilt import create_react_agent
+from rich.console import Console
+from rich.live import Live
+from rich.markdown import Markdown
+from rich.panel import Panel
+from rich.spinner import Spinner
+from tqdm import tqdm
+
+from src.models.embeddings import get_embedding_model
+from src.models.llm import get_llm_model
+from src.utils.logger import custom_theme, get_logger  # Import custom_theme
 
 # Setup logging
 logger = get_logger()
@@ -46,7 +43,8 @@ def get_retriever_tool(vectorstore):
         """Retrieve relevant documents from the knowledge base."""
         retriever = vectorstore.as_retriever()
         docs = retriever.invoke(query)
-        return '\n\n'.join(doc.page_content for doc in docs)
+        return "\n\n".join(doc.page_content for doc in docs)
+
     return retrieve_context
 
 
@@ -89,11 +87,7 @@ def list_knowledge_bases() -> List[str]:
         return []
 
     # List all directories in knowledges/
-    knowledge_bases = [
-        d
-        for d in os.listdir(KNOWLEDGE_BASE_DIR)
-        if os.path.isdir(os.path.join(KNOWLEDGE_BASE_DIR, d))
-    ]
+    knowledge_bases = [d for d in os.listdir(KNOWLEDGE_BASE_DIR) if os.path.isdir(os.path.join(KNOWLEDGE_BASE_DIR, d))]
     logger.info(f"Found knowledge bases: {knowledge_bases}")
     return knowledge_bases
 
@@ -111,9 +105,7 @@ def delete_knowledge_base(knowledge_base_name: str) -> None:
         console.print(f"[error]Deleted knowledge base: {knowledge_base_name}[/error]")
         logger.info(f"Deleted knowledge base: {knowledge_base_name}")
     else:
-        console.print(
-            f"[warning]Knowledge base '{knowledge_base_name}' does not exist.[/warning]"
-        )
+        console.print(f"[warning]Knowledge base '{knowledge_base_name}' does not exist.[/warning]")
         logger.warning(f"Knowledge base '{knowledge_base_name}' does not exist.")
 
 

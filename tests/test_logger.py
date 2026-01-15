@@ -1,8 +1,10 @@
 # tests/test_logger.py
-import os
 import logging
+import os
+
 import pytest
-from src.utils.logger import setup_logger, get_logger, toggle_logs, LOG_FILE
+
+from src.utils.logger import LOG_FILE, get_logger, setup_logger, toggle_logs
 
 
 # Fixtures
@@ -64,7 +66,7 @@ def test_logging_messages(logger, cleanup_log_file, capsys):
     assert test_message in captured.out
 
     # Check log file
-    with open(LOG_FILE, "r") as log_file:
+    with open(LOG_FILE) as log_file:
         log_content = log_file.read()
         assert test_message in log_content
 

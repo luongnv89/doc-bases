@@ -1,9 +1,11 @@
 # tests/test_document_loader.py
 import os
 import shutil
+from unittest.mock import MagicMock, patch
+
 import pytest
-from unittest.mock import patch, MagicMock
 from langchain.schema import Document
+
 from src.utils.document_loader import DocumentLoader
 
 # Constants

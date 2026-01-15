@@ -1,0 +1,112 @@
+[project]
+name = "doc-bases"
+version = "1.0.0"
+description = "A Retrieval-Augmented Generation (RAG) system for document-based Q&A"
+readme = "README.md"
+requires-python = ">=3.9"
+license = {text = "MIT"}
+
+[tool.black]
+line-length = 150
+target-version = ['py39', 'py310', 'py311', 'py312']
+include = '\.pyi?$'
+exclude = '''
+/(
+    \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | _build
+  | buck-out
+  | build
+  | dist
+  | knowledges
+  | logs
+  | temps
+)/
+'''
+
+[tool.isort]
+profile = "black"
+line_length = 150
+skip = [".venv", "knowledges", "logs", "temps"]
+known_first_party = ["src"]
+
+[tool.ruff]
+line-length = 150
+target-version = "py39"
+exclude = [
+    ".venv",
+    "knowledges",
+    "logs",
+    "temps",
+    "__pycache__",
+]
+
+[tool.ruff.lint]
+select = [
+    "E",      # pycodestyle errors
+    "W",      # pycodestyle warnings
+    "F",      # Pyflakes
+    "I",      # isort
+    "B",      # flake8-bugbear
+    "C4",     # flake8-comprehensions
+    "UP",     # pyupgrade
+    "SIM",    # flake8-simplify
+]
+ignore = [
+    "E501",   # line too long (handled by black)
+    "B008",   # do not perform function calls in argument defaults
+    "B904",   # raise without from inside except
+    "UP006",  # Use `list` instead of `List` - keep for Python 3.9 compatibility
+    "UP035",  # deprecated typing imports - keep for Python 3.9 compatibility
+    "SIM117", # nested with statements - keep for clarity
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["S101"]  # Allow assert in tests
+
+[tool.mypy]
+python_version = "3.9"
+warn_return_any = false
+warn_unused_configs = true
+ignore_missing_imports = true
+check_untyped_defs = false
+disallow_untyped_defs = false
+exclude = [
+    "knowledges/",
+    "logs/",
+    "temps/",
+    ".venv/",
+]
+
+[tool.bandit]
+exclude_dirs = ["tests", ".venv", "knowledges", "logs", "temps"]
+skips = ["B101"]  # Skip assert statements
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-v --tb=short"
+filterwarnings = [
+    "ignore::DeprecationWarning",
+    "ignore::UserWarning",
+]
+
+[tool.coverage.run]
+source = ["src"]
+omit = ["tests/*", ".venv/*"]
+branch = true
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+]

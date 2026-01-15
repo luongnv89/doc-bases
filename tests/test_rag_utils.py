@@ -2,16 +2,12 @@
 import os
 import shutil
 import tempfile
+
 import pytest
 from langchain.schema import Document
-from src.utils.rag_utils import (
-    setup_rag,
-    list_knowledge_bases,
-    delete_knowledge_base,
-    load_rag_chain,
-    interactive_cli,
-)
+
 from src.models.llm import get_llm_model
+from src.utils.rag_utils import delete_knowledge_base, interactive_cli, list_knowledge_bases, load_rag_chain, setup_rag
 
 
 # Fixtures
@@ -55,9 +51,7 @@ def test_setup_rag(test_documents, test_knowledge_base_name, llm, mock_temp_dir)
     assert qa_chain is not None
 
 
-def test_list_knowledge_bases(
-    test_documents, test_knowledge_base_name, llm, mock_temp_dir
-):
+def test_list_knowledge_bases(test_documents, test_knowledge_base_name, llm, mock_temp_dir):
     """Test listing available knowledge bases."""
     os.environ["KNOWLEDGE_BASE_DIR"] = mock_temp_dir
     setup_rag(test_documents, test_knowledge_base_name, llm=llm)
@@ -65,9 +59,7 @@ def test_list_knowledge_bases(
     assert test_knowledge_base_name in knowledge_bases
 
 
-def test_delete_knowledge_base(
-    test_documents, test_knowledge_base_name, llm, mock_temp_dir
-):
+def test_delete_knowledge_base(test_documents, test_knowledge_base_name, llm, mock_temp_dir):
     """Test deleting a knowledge base."""
     os.environ["KNOWLEDGE_BASE_DIR"] = mock_temp_dir
     setup_rag(test_documents, test_knowledge_base_name, llm=llm)
@@ -83,9 +75,7 @@ def test_load_rag_chain(test_documents, test_knowledge_base_name, llm, mock_temp
     assert qa_chain is not None
 
 
-def test_interactive_cli(
-    test_documents, test_knowledge_base_name, llm, mock_temp_dir, monkeypatch
-):
+def test_interactive_cli(test_documents, test_knowledge_base_name, llm, mock_temp_dir, monkeypatch):
     """Test the interactive CLI."""
     os.environ["KNOWLEDGE_BASE_DIR"] = mock_temp_dir
     setup_rag(test_documents, test_knowledge_base_name, llm=llm)
