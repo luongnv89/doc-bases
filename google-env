@@ -1,5 +1,0 @@
-LLM_PROVIDER=google
-LLM_MODEL=gemini-1.5-flash
-EMB_PROVIDER=google
-EMB_MODEL=models/text-embedding-004
-GOOGLE_API_KEY=
