@@ -9,7 +9,7 @@ from rich.table import Table
 from src.utils.document_loader import DocumentLoader
 from src.utils.logger import custom_theme, setup_logger, toggle_logs
 from src.utils.rag_utils import delete_knowledge_base, interactive_cli, list_knowledge_bases, setup_rag
-from src.utils.utilities import generate_knowledge_base_name, get_version_from_git
+from src.utils.utilities import generate_knowledge_base_name, get_version_from_git, normalize_file_path
 
 # Load environment variables from .env file
 load_dotenv()
@@ -97,12 +97,12 @@ def setup_rag_cli(doc_loader: DocumentLoader):
         docs = doc_loader.load_documents_from_repo(input_str)
     elif source_choice == 2:
         input_str = input("Enter the file path: ").strip()
+        input_str = normalize_file_path(input_str)
         logger.info(f"User provided file path: {input_str}")
         docs = doc_loader.load_documents_from_file(input_str)
     elif source_choice == 3:
         input_str = input("Enter the folder path: ").strip()
-        # Strip quotes from the input path
-        input_str = input_str.strip("'\"")  # Remove both single and double quotes
+        input_str = normalize_file_path(input_str)
         logger.info(f"User provided folder path: {input_str}")
         docs = doc_loader.load_documents_from_directory(input_str)
     elif source_choice == 4:
