@@ -39,13 +39,16 @@ pydantic>=2.0.0
 
 # -----------------------------------------------------------------------------
 # Security Patches - Transitive dependencies with minimum safe versions
+# Critical & High priority vulnerabilities have been patched
+# Reference: https://github.com/luongnv89/doc-bases/security/dependabot
 # -----------------------------------------------------------------------------
-h11>=0.16.0                 # Critical: fixes malformed Chunked-Encoding bodies
-cryptography>=44.0.1        # Fixes vulnerable OpenSSL in wheels
-protobuf>=5.29.5            # High: fixes potential DoS issue
-urllib3>=2.5.0              # Fixes redirect handling issues
-aiohttp>=3.12.14            # Fixes HTTP Request/Response Smuggling
-starlette>=0.47.2           # Fixes DoS in multipart form parsing
+h11>=0.16.0                 # CRITICAL (CVE-2025-43859): fixes malformed Chunked-Encoding bodies
+cryptography>=44.0.1        # LOW (CVE-2024-12797): fixes vulnerable OpenSSL in wheels
+protobuf>=5.29.5            # HIGH (CVE-2025-4565): fixes potential DoS issue
+urllib3>=2.5.0              # MEDIUM (CVE-2025-50181, CVE-2025-50182): fixes redirect handling
+aiohttp>=3.12.14            # LOW (CVE-2025-53643): fixes HTTP handling
+starlette>=0.47.2           # MEDIUM (CVE-2025-54121): fixes DoS in multipart form parsing
+requests>=2.32.4            # MEDIUM (CVE-2024-47081): fixes security issues
 
 # -----------------------------------------------------------------------------
 # Document Loaders
