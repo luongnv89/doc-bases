@@ -34,8 +34,18 @@ python-dotenv>=1.0.1
 tqdm>=4.67.0
 python-magic>=0.4.27
 beautifulsoup4>=4.12.0
-requests>=2.32.0
+requests>=2.32.4
 pydantic>=2.0.0
+
+# -----------------------------------------------------------------------------
+# Security Patches - Transitive dependencies with minimum safe versions
+# -----------------------------------------------------------------------------
+h11>=0.16.0                 # Critical: fixes malformed Chunked-Encoding bodies
+cryptography>=44.0.1        # Fixes vulnerable OpenSSL in wheels
+protobuf>=5.29.5            # High: fixes potential DoS issue
+urllib3>=2.5.0              # Fixes redirect handling issues
+aiohttp>=3.12.14            # Fixes HTTP Request/Response Smuggling
+starlette>=0.47.2           # Fixes DoS in multipart form parsing
 
 # -----------------------------------------------------------------------------
 # Document Loaders
