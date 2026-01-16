@@ -39,3 +39,13 @@ knowledges/
 logs/
 temps/
 bk.env
+
+# Local development files
+.claude/
+.specify/
+CI_CD_SETUP.md
+INSTALLATION.md
+MORDERNIZATION_PLAN.md
+TODO.md
+SECURITY_PATCHES.md
+requirements-dev.txt
