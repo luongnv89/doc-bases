@@ -3,12 +3,12 @@ name = "doc-bases"
 version = "2.0.0"
 description = "A Retrieval-Augmented Generation (RAG) system for document-based Q&A"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 license = {text = "MIT"}
 
 [tool.black]
 line-length = 150
-target-version = ['py310', 'py311', 'py312']
+target-version = ['py311', 'py312']
 include = '\.pyi?$'
 exclude = '''
 /(
@@ -36,7 +36,7 @@ known_first_party = ["src"]
 
 [tool.ruff]
 line-length = 150
-target-version = "py310"
+target-version = "py311"
 exclude = [
     ".venv",
     "knowledges",
@@ -67,7 +67,7 @@ ignore = [
 "tests/*" = ["S101"]  # Allow assert in tests
 
 [tool.mypy]
-python_version = "3.10"
+python_version = "3.11"
 warn_return_any = false
 warn_unused_configs = true
 ignore_missing_imports = true
