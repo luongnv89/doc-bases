@@ -1,0 +1,24 @@
+#!/usr/bin/env python3
+"""
+DocBases CLI Main Entry Point
+Handles Python path setup and CLI execution
+"""
+
+import sys
+from pathlib import Path
+
+# Add project root to Python path for imports
+project_root = Path(__file__).parent.resolve()
+sys.path.insert(0, str(project_root))
+
+# Check for virtual environment - if not in one, provide guidance
+if not (hasattr(sys, "real_prefix") or (hasattr(sys, "base_prefix") and sys.base_prefix != sys.prefix)):
+    # Not in a virtual environment, but we'll still run
+    # (user might have installed globally or want guidance later)
+    pass
+
+# Import and run the CLI app
+from src.cli.main import app
+
+if __name__ == "__main__":
+    app()

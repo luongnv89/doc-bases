@@ -2,6 +2,10 @@
 
 Setup, testing, and contribution guidelines for DocBases.
 
+## Quick Setup with Ollama
+
+**New to development?** Follow the **[Ollama Setup Guide](OLLAMA_SETUP.md)** first for local development (5 minutes, no API keys needed).
+
 ## Development Setup
 
 ### Prerequisites
@@ -9,6 +13,7 @@ Setup, testing, and contribution guidelines for DocBases.
 - Python 3.10+
 - Git
 - Virtual environment tool (venv, conda, etc.)
+- **Ollama** (for local development) or cloud API key (OpenAI/Google/Groq)
 
 ### Step 1: Clone & Setup
 

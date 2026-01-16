@@ -8,7 +8,9 @@ An advanced document querying system that combines agentic workflows, RAG patter
 
 ## Quick Start
 
-### Installation
+> 🚀 **New to DocBases?** Start with **[INSTALLATION.md](INSTALLATION.md)** - Get running locally in 5 minutes with no API keys needed!
+
+### Installation (5 Minutes)
 
 ```bash
 # Clone repository
@@ -16,7 +18,7 @@ git clone https://github.com/luongnv89/doc-bases.git
 cd doc-bases
 
 # Create virtual environment
-python3.10 -m venv venv
+python3 -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
 
 # Install dependencies
@@ -24,16 +26,62 @@ pip install -r requirements.txt
 
 # Copy environment template
 cp .env.example .env
+
+# Install as editable package (enables 'docb' CLI)
+pip install -e .
 ```
+
+### Prerequisites
+
+DocBases is configured by default to use **Ollama** (local, free, no API keys). To use it:
+
+1. **Install Ollama**: Download from [ollama.ai](https://ollama.ai)
+2. **Run Ollama**: `ollama serve` (in separate terminal)
+3. **Pull models**:
+   ```bash
+   ollama pull llama3.1:8b
+   ollama pull nomic-embed-text
+   ```
+
+See **[INSTALLATION.md](INSTALLATION.md)** for quick setup, or **[docs/OLLAMA_SETUP.md](docs/OLLAMA_SETUP.md)** for detailed steps and cloud provider alternatives (OpenAI, Google, Groq).
 
 ### Basic Usage
 
+#### CLI Commands (Recommended)
+
 ```bash
-# Start the application
-python src/main.py
+# See all available commands
+docb --help
+
+# Configure settings
+docb config list
+docb config set rag.mode corrective
+
+# Check health
+docb health check
+
+# Manage knowledge bases
+docb kb list
+docb kb add file /path/to/document.pdf --name "My KB"
+docb kb info "My KB"
+
+# Query knowledge base
+docb query interactive                           # Interactive mode
+docb query single --query "Your question?"       # Single query
+docb query batch queries.txt --output results.json  # Batch queries
+
+# View version
+docb version
 ```
 
-Then in the CLI:
+#### Legacy Menu Mode (Optional)
+
+```bash
+# Start with menu interface (for backwards compatibility)
+python src/main.py --legacy
+```
+
+Then in the legacy menu:
 1. **Setup RAG** - Load documents from GitHub repos, local files, websites, or download URLs
 2. **Interactive CLI** - Query your knowledge bases with natural language
 3. **Manage Knowledge Bases** - List, delete, or switch between bases
@@ -50,6 +98,8 @@ Then in the CLI:
 
 ## Documentation
 
+- **[🚀 Ollama Setup Guide](docs/OLLAMA_SETUP.md)** - Get started locally in 5 minutes (START HERE!)
+- **[CLI Usage Guide](docs/CLI_USAGE.md)** - Complete CLI command reference and examples
 - **[Architecture Guide](docs/ARCHITECTURE.md)** - System design, RAG patterns, agent workflows
 - **[API Reference](docs/API.md)** - Component interfaces, configuration, environment variables
 - **[Development Guide](docs/DEVELOPMENT.md)** - Setup, testing, contributing guidelines

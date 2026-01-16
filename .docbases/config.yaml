@@ -1,0 +1,52 @@
+# =============================================================================
+# DocBases Configuration Template
+# =============================================================================
+# This file stores project-level configuration. Environment variables and .env
+# file values take precedence over this file.
+#
+# Copy this to customize your project settings:
+#   cp .docbases/config.yaml .docbases/config.local.yaml
+#
+# IMPORTANT: Never commit API keys here. Use .env file instead.
+# =============================================================================
+
+version: "1.0"
+
+# =============================================================================
+# LLM Provider Configuration
+# =============================================================================
+llm:
+  provider: openai                    # Options: openai, google, groq, ollama
+  model: gpt-4o-mini
+  api_base: null                      # Optional: for Ollama or custom APIs
+
+# =============================================================================
+# Embedding Provider Configuration
+# =============================================================================
+embedding:
+  provider: openai                    # Options: openai, google, ollama
+  model: text-embedding-3-small
+  api_base: null                      # Optional: for Ollama or custom APIs
+
+# =============================================================================
+# RAG Mode Configuration
+# =============================================================================
+rag:
+  mode: basic                         # Options: basic, corrective, adaptive, multi_agent
+  use_docling: false                  # Use Docling for advanced PDF parsing
+  chunking_strategy: recursive        # Options: recursive, semantic
+
+# =============================================================================
+# Persistence Settings
+# =============================================================================
+persistence:
+  use_persistent_memory: true
+  checkpoint_db_path: knowledges/checkpoints.db
+  metrics_db_path: knowledges/metrics.db
+
+# =============================================================================
+# Observability Settings
+# =============================================================================
+observability:
+  langsmith_tracing: false            # Enable LangSmith tracing for debugging
+  langsmith_project: doc-bases        # LangSmith project name

@@ -2,6 +2,10 @@
 
 This document provides comprehensive instructions for an AI agent to perform a complete, from-scratch installation and setup of the DocBases project. The process is divided into three phases: Research, Plan, and Execute.
 
+> **📌 Important:** For **Ollama-based setup** (recommended, no API keys needed), see **[agent-instructions-ollama.md](agent-instructions-ollama.md)** instead. That version is simpler and focused on local inference.
+
+> **✓ NEW:** Installation is now **fully automated**! See **[INSTALLATION.md](INSTALLATION.md)** for quick setup, or **[SETUP_REPORT.md](SETUP_REPORT.md)** for completed setup documentation.
+
 ---
 
 ## Overview
