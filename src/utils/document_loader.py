@@ -4,6 +4,10 @@ preparing them for embedding by splitting them into small chunks.
 It includes functionalities for loading text-based documents, splitting documents
 into chunks, cloning repositories, downloading files from URLs, and
 scraping content from websites.
+
+Phase 2 enhancements:
+- Docling integration for advanced PDF/document parsing
+- Semantic chunking for better retrieval quality
 """
 
 import fnmatch
@@ -16,8 +20,8 @@ from typing import List, Optional
 import magic
 import requests
 from bs4 import BeautifulSoup
-from langchain.schema import Document
-from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain_core.documents import Document
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.document_loaders import (
     PyPDFLoader,
     TextLoader,
@@ -29,12 +33,24 @@ from rich.console import Console
 from tqdm import tqdm
 
 from src.utils.logger import custom_theme, get_logger  # Import custom_theme
+from src.utils.docling_loader import DoclingDocumentLoader, is_docling_available
+from src.utils.semantic_splitter import (
+    SemanticDocumentSplitter,
+    get_chunking_strategy,
+    is_semantic_chunker_available,
+)
 
 # Setup logging
 logger = get_logger()
 
 # Initialize rich console with custom_theme
 console = Console(theme=custom_theme)
+
+
+def _use_docling() -> bool:
+    """Check if Docling should be used for document loading."""
+    use_docling = os.getenv("USE_DOCLING", "false").lower() == "true"
+    return use_docling and is_docling_available()
 
 
 class DocumentLoader:
@@ -126,12 +142,30 @@ class DocumentLoader:
         """
         Loads a single document of a supported type.
 
+        Tries Docling first if enabled (for enhanced PDF/document parsing),
+        then falls back to standard loaders.
+
         Args:
             file_path: Path to the file.
 
         Returns:
             A list of LangChain documents or None if loading fails.
         """
+        # Try Docling first if enabled
+        if _use_docling():
+            try:
+                docling_loader = DoclingDocumentLoader(
+                    chunk_size=self.chunk_size,
+                    chunk_overlap=self.chunk_overlap
+                )
+                if docling_loader.supports_format(file_path):
+                    console.print("[info]Using Docling parser[/info]")
+                    return docling_loader.load_document(file_path)
+            except Exception as e:
+                console.print(f"[warning]Docling failed, falling back: {e}[/warning]")
+                logger.warning(f"Docling fallback for {file_path}: {e}")
+
+        # Standard MIME-type based loading logic
         try:
             mime_type = magic.from_file(file_path, mime=True)
             logger.info(f"File MIME Type: {mime_type}")
@@ -222,7 +256,11 @@ class DocumentLoader:
 
     def _split_documents_to_chunk(self, documents: List[Document]) -> Optional[List[Document]]:
         """
-        Splits a list of documents into smaller chunks using LangChain's text splitter.
+        Splits a list of documents into smaller chunks using configured strategy.
+
+        Supports two strategies (configured via CHUNKING_STRATEGY env var):
+        - recursive: Traditional character-based splitting (default)
+        - semantic: Embedding-based semantic boundary detection
 
         Args:
             documents: A list of LangChain documents to be split.
@@ -232,8 +270,25 @@ class DocumentLoader:
             or None if there's an error during splitting.
         """
         try:
-            console.print("[info]Splitting documents into chunks...[/info]")
-            text_splitter = RecursiveCharacterTextSplitter(chunk_size=self.chunk_size, chunk_overlap=self.chunk_overlap)
+            strategy = get_chunking_strategy()
+
+            if strategy == "semantic" and is_semantic_chunker_available():
+                console.print("[info]Using semantic chunking strategy[/info]")
+                try:
+                    splitter = SemanticDocumentSplitter()
+                    split_documents = splitter.split_documents(documents)
+                    console.print(f"[success]Semantic splitting: {len(split_documents)} chunks[/success]")
+                    return split_documents
+                except Exception as e:
+                    console.print(f"[warning]Semantic chunking failed, falling back to recursive: {e}[/warning]")
+                    logger.warning(f"Semantic chunking fallback: {e}")
+
+            # Default: recursive character splitting
+            console.print("[info]Using recursive chunking strategy[/info]")
+            text_splitter = RecursiveCharacterTextSplitter(
+                chunk_size=self.chunk_size,
+                chunk_overlap=self.chunk_overlap
+            )
             split_documents = text_splitter.split_documents(documents)
             console.print(f"[success]Successfully split documents into {len(split_documents)} chunks.[/success]")
             return split_documents

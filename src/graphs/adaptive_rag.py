@@ -1,0 +1,195 @@
+"""
+Adaptive RAG with query routing and strategy selection.
+
+Routes queries to optimal retrieval strategy:
+- Simple: Direct vectorstore retrieval (fast)
+- Complex: Multi-step retrieval with reranking
+- Web: External web search for out-of-domain queries
+"""
+from typing import TypedDict, List, Literal, Annotated
+
+from langchain_core.documents import Document
+from langchain_core.messages import BaseMessage, HumanMessage, AIMessage
+from langchain_core.prompts import ChatPromptTemplate
+from langgraph.graph import StateGraph, END
+from langgraph.graph.message import add_messages
+
+from src.tools.web_search import web_search_to_documents
+from src.utils.logger import get_logger
+
+logger = get_logger()
+
+
+class AdaptiveRAGState(TypedDict):
+    """State for Adaptive RAG workflow."""
+    messages: Annotated[List[BaseMessage], add_messages]
+    question: str
+    query_type: Literal["simple", "complex", "web"] | None
+    documents: List[Document]
+    generation: str
+
+
+class AdaptiveRAGGraph:
+    """
+    Adaptive RAG with intelligent query routing.
+    """
+
+    def __init__(self, vectorstore, llm, checkpointer=None):
+        self.vectorstore = vectorstore
+        self.llm = llm
+        self.checkpointer = checkpointer
+
+        self.classification_prompt = ChatPromptTemplate.from_messages([
+            ("system", """Classify the query type:
+
+- simple: Direct factual question, single document lookup
+- complex: Requires reasoning or multiple documents
+- web: Current events or external information
+
+Respond with ONLY: simple, complex, or web"""),
+            ("human", "{question}")
+        ])
+
+        self.graph = self._build_graph()
+        logger.info("AdaptiveRAGGraph initialized")
+
+    async def classify_query(self, state: AdaptiveRAGState) -> AdaptiveRAGState:
+        """Classify query complexity/type."""
+        logger.info(f"Classifying: {state['question']}")
+
+        chain = self.classification_prompt | self.llm
+        response = await chain.ainvoke({"question": state["question"]})
+
+        classification = response.content.strip().lower() if hasattr(response, 'content') else "simple"
+
+        if classification not in ["simple", "complex", "web"]:
+            classification = "simple"
+
+        state["query_type"] = classification
+        logger.info(f"Classified as: {classification}")
+        return state
+
+    def route_query(self, state: AdaptiveRAGState) -> str:
+        """Route to appropriate retrieval strategy."""
+        return state["query_type"]
+
+    async def simple_retrieval(self, state: AdaptiveRAGState) -> AdaptiveRAGState:
+        """Fast direct retrieval for simple queries."""
+        logger.info("Simple retrieval")
+
+        retriever = self.vectorstore.as_retriever(search_kwargs={"k": 3})
+        docs = await retriever.ainvoke(state["question"])
+
+        state["documents"] = docs
+        return state
+
+    async def complex_retrieval(self, state: AdaptiveRAGState) -> AdaptiveRAGState:
+        """Multi-step retrieval for complex queries."""
+        logger.info("Complex retrieval")
+
+        retriever = self.vectorstore.as_retriever(search_kwargs={"k": 6})
+        initial_docs = await retriever.ainvoke(state["question"])
+
+        # Generate sub-queries
+        subquery_prompt = ChatPromptTemplate.from_messages([
+            ("system", "Generate 2 related queries. One per line."),
+            ("human", "{question}")
+        ])
+
+        chain = subquery_prompt | self.llm
+        response = await chain.ainvoke({"question": state["question"]})
+
+        subqueries = response.content.strip().split("\n") if hasattr(response, 'content') else []
+
+        all_docs = list(initial_docs)
+        for sq in subqueries[:2]:
+            if sq.strip():
+                sub_docs = await retriever.ainvoke(sq.strip())
+                all_docs.extend(sub_docs)
+
+        # Deduplicate
+        seen = set()
+        unique_docs = []
+        for doc in all_docs:
+            content_hash = hash(doc.page_content[:100])
+            if content_hash not in seen:
+                seen.add(content_hash)
+                unique_docs.append(doc)
+
+        state["documents"] = unique_docs[:8]
+        return state
+
+    async def web_retrieval(self, state: AdaptiveRAGState) -> AdaptiveRAGState:
+        """Web search for external information."""
+        logger.info("Web retrieval")
+
+        retriever = self.vectorstore.as_retriever(search_kwargs={"k": 2})
+        local_docs = await retriever.ainvoke(state["question"])
+
+        web_docs = web_search_to_documents(state["question"], max_results=3)
+
+        state["documents"] = local_docs + web_docs
+        return state
+
+    async def generate(self, state: AdaptiveRAGState) -> AdaptiveRAGState:
+        """Generate answer."""
+        logger.info("Generating")
+
+        context = "\n\n".join([doc.page_content for doc in state["documents"]])
+
+        prompt = f"""Context:
+{context}
+
+Question: {state['question']}
+
+Answer:"""
+
+        response = await self.llm.ainvoke(prompt)
+        state["generation"] = response.content if hasattr(response, 'content') else str(response)
+
+        state["messages"].append(HumanMessage(content=state["question"]))
+        state["messages"].append(AIMessage(content=state["generation"]))
+
+        return state
+
+    def _build_graph(self) -> StateGraph:
+        """Build workflow graph."""
+        workflow = StateGraph(AdaptiveRAGState)
+
+        workflow.add_node("classify", self.classify_query)
+        workflow.add_node("simple_retrieval", self.simple_retrieval)
+        workflow.add_node("complex_retrieval", self.complex_retrieval)
+        workflow.add_node("web_retrieval", self.web_retrieval)
+        workflow.add_node("generate", self.generate)
+
+        workflow.set_entry_point("classify")
+
+        workflow.add_conditional_edges(
+            "classify",
+            self.route_query,
+            {
+                "simple": "simple_retrieval",
+                "complex": "complex_retrieval",
+                "web": "web_retrieval"
+            }
+        )
+
+        workflow.add_edge("simple_retrieval", "generate")
+        workflow.add_edge("complex_retrieval", "generate")
+        workflow.add_edge("web_retrieval", "generate")
+        workflow.add_edge("generate", END)
+
+        return workflow.compile(checkpointer=self.checkpointer)
+
+    async def invoke(self, question: str, config: dict = None) -> str:
+        """Run workflow."""
+        initial_state = {
+            "messages": [],
+            "question": question,
+            "query_type": None,
+            "documents": [],
+            "generation": ""
+        }
+
+        result = await self.graph.ainvoke(initial_state, config=config)
+        return result["generation"]

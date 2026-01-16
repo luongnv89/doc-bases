@@ -1,14 +1,14 @@
 [project]
 name = "doc-bases"
-version = "1.0.0"
+version = "2.0.0"
 description = "A Retrieval-Augmented Generation (RAG) system for document-based Q&A"
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 license = {text = "MIT"}
 
 [tool.black]
 line-length = 150
-target-version = ['py39', 'py310', 'py311', 'py312']
+target-version = ['py310', 'py311', 'py312']
 include = '\.pyi?$'
 exclude = '''
 /(
@@ -36,7 +36,7 @@ known_first_party = ["src"]
 
 [tool.ruff]
 line-length = 150
-target-version = "py39"
+target-version = "py310"
 exclude = [
     ".venv",
     "knowledges",
@@ -60,8 +60,6 @@ ignore = [
     "E501",   # line too long (handled by black)
     "B008",   # do not perform function calls in argument defaults
     "B904",   # raise without from inside except
-    "UP006",  # Use `list` instead of `List` - keep for Python 3.9 compatibility
-    "UP035",  # deprecated typing imports - keep for Python 3.9 compatibility
     "SIM117", # nested with statements - keep for clarity
 ]
 
@@ -69,7 +67,7 @@ ignore = [
 "tests/*" = ["S101"]  # Allow assert in tests
 
 [tool.mypy]
-python_version = "3.9"
+python_version = "3.10"
 warn_return_any = false
 warn_unused_configs = true
 ignore_missing_imports = true

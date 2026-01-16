@@ -4,7 +4,7 @@ import shutil
 from unittest.mock import MagicMock, patch
 
 import pytest
-from langchain.schema import Document
+from langchain_core.documents import Document
 
 from src.utils.document_loader import DocumentLoader
 
@@ -36,21 +36,27 @@ def mock_temp_dir():
 @pytest.fixture
 def mock_file():
     """Fixture to create a test file."""
+    os.makedirs(TEST_TEMP_DIR, exist_ok=True)
     file_path = os.path.join(TEST_TEMP_DIR, "test_file.txt")
     with open(file_path, "w") as f:
         f.write(TEST_FILE_CONTENT)
-    return file_path
+    yield file_path
+    if os.path.exists(TEST_TEMP_DIR):
+        shutil.rmtree(TEST_TEMP_DIR)
 
 
 @pytest.fixture
 def mock_repo_dir():
     """Fixture to create a mock repository directory."""
+    os.makedirs(TEST_TEMP_DIR, exist_ok=True)
     repo_dir = os.path.join(TEST_TEMP_DIR, "repo")
     os.makedirs(repo_dir, exist_ok=True)
     file_path = os.path.join(repo_dir, "test_file.txt")
     with open(file_path, "w") as f:
         f.write(TEST_FILE_CONTENT)
-    return repo_dir
+    yield repo_dir
+    if os.path.exists(TEST_TEMP_DIR):
+        shutil.rmtree(TEST_TEMP_DIR)
 
 
 # Tests
@@ -100,35 +106,59 @@ def test_split_documents_to_chunk(document_loader, mock_file):
     assert isinstance(chunked_documents[0], Document)
 
 
-def test_clone_and_parse_repo(document_loader, mock_temp_dir):
+def test_clone_and_parse_repo(document_loader):
     """Test cloning and parsing a repository."""
-    with patch("subprocess.run") as mock_run:
-        mock_run.return_value = MagicMock(returncode=0)
-        documents = document_loader._clone_and_parse_repo(TEST_REPO_URL)
-        assert isinstance(documents, list)
-        assert len(documents) > 0
-        assert isinstance(documents[0], Document)
+    # Create a mock repo directory with a test file before subprocess.run is called
+    repo_dir = os.path.join(TEST_TEMP_DIR, "repo")
+
+    def mock_clone(*args, **kwargs):
+        """Side effect that creates the repo directory when git clone is called."""
+        os.makedirs(repo_dir, exist_ok=True)
+        file_path = os.path.join(repo_dir, "test_file.txt")
+        with open(file_path, "w") as f:
+            f.write(TEST_FILE_CONTENT)
+        return MagicMock(returncode=0)
+
+    with patch("subprocess.run", side_effect=mock_clone) as mock_run:
+        try:
+            documents = document_loader._clone_and_parse_repo(TEST_REPO_URL)
+            assert isinstance(documents, list)
+            assert len(documents) > 0
+            assert isinstance(documents[0], Document)
+        finally:
+            # Cleanup
+            if os.path.exists(TEST_TEMP_DIR):
+                shutil.rmtree(TEST_TEMP_DIR)
 
 
 def test_download_file(document_loader, mock_temp_dir):
     """Test downloading a file."""
     with patch("requests.get") as mock_get:
-        mock_get.return_value = MagicMock(
-            status_code=200,
-            iter_content=lambda: [b"This is a test file."],
-            headers={"content-length": "20"},
-        )
+        # Create a proper mock response
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.headers = {"content-length": "20"}
+        mock_response.raise_for_status = MagicMock()
+        # iter_content should return an iterator with chunks
+        mock_response.iter_content.return_value = iter([b"This is a test file."])
+        mock_get.return_value = mock_response
+
         result = document_loader._download_file(TEST_FILE_URL, "test_file.txt")
         assert result is True
+        # Verify the file was created
+        expected_path = os.path.join(TEST_TEMP_DIR, "test_file.txt")
+        assert os.path.exists(expected_path)
 
 
 def test_scrape_website(document_loader):
     """Test scraping a website."""
     with patch("requests.get") as mock_get:
-        mock_get.return_value = MagicMock(
-            status_code=200,
-            content=TEST_WEBSITE_CONTENT.encode("utf-8"),
-        )
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.content = TEST_WEBSITE_CONTENT.encode("utf-8")
+        mock_response.raise_for_status = MagicMock()
+        mock_get.return_value = mock_response
+
         document = document_loader._scrape_website(TEST_WEBSITE_URL)
         assert isinstance(document, Document)
         assert "This is a test website." in document.page_content
@@ -137,11 +167,14 @@ def test_scrape_website(document_loader):
 def test_load_documents_from_url(document_loader, mock_temp_dir):
     """Test loading documents from a URL."""
     with patch("requests.get") as mock_get:
-        mock_get.return_value = MagicMock(
-            status_code=200,
-            iter_content=lambda: [b"This is a test file."],
-            headers={"content-length": "20"},
-        )
+        # Create a proper mock response for download
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.headers = {"content-length": "20"}
+        mock_response.raise_for_status = MagicMock()
+        mock_response.iter_content.return_value = iter([b"This is a test file."])
+        mock_get.return_value = mock_response
+
         documents = document_loader.load_documents_from_url(TEST_FILE_URL)
         assert isinstance(documents, list)
         assert len(documents) > 0
@@ -164,23 +197,40 @@ def test_load_documents_from_file(document_loader, mock_file):
     assert isinstance(documents[0], Document)
 
 
-def test_load_documents_from_repo(document_loader, mock_temp_dir):
+def test_load_documents_from_repo(document_loader):
     """Test loading documents from a repository."""
-    with patch("subprocess.run") as mock_run:
-        mock_run.return_value = MagicMock(returncode=0)
-        documents = document_loader.load_documents_from_repo(TEST_REPO_URL)
-        assert isinstance(documents, list)
-        assert len(documents) > 0
-        assert isinstance(documents[0], Document)
+    # Create a mock repo directory with a test file before subprocess.run is called
+    repo_dir = os.path.join(TEST_TEMP_DIR, "repo")
+
+    def mock_clone(*args, **kwargs):
+        """Side effect that creates the repo directory when git clone is called."""
+        os.makedirs(repo_dir, exist_ok=True)
+        file_path = os.path.join(repo_dir, "test_file.txt")
+        with open(file_path, "w") as f:
+            f.write(TEST_FILE_CONTENT)
+        return MagicMock(returncode=0)
+
+    with patch("subprocess.run", side_effect=mock_clone) as mock_run:
+        try:
+            documents = document_loader.load_documents_from_repo(TEST_REPO_URL)
+            assert isinstance(documents, list)
+            assert len(documents) > 0
+            assert isinstance(documents[0], Document)
+        finally:
+            # Cleanup
+            if os.path.exists(TEST_TEMP_DIR):
+                shutil.rmtree(TEST_TEMP_DIR)
 
 
 def test_load_documents_from_website(document_loader):
     """Test loading documents from a website."""
     with patch("requests.get") as mock_get:
-        mock_get.return_value = MagicMock(
-            status_code=200,
-            content=TEST_WEBSITE_CONTENT.encode("utf-8"),
-        )
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.content = TEST_WEBSITE_CONTENT.encode("utf-8")
+        mock_response.raise_for_status = MagicMock()
+        mock_get.return_value = mock_response
+
         documents = document_loader.load_documents_from_website(TEST_WEBSITE_URL)
         assert isinstance(documents, list)
         assert len(documents) > 0

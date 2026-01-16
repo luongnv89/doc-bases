@@ -4,18 +4,32 @@ Retrieval-Augmented Generation (RAG) system. It includes functionalities for
 creating QA chains, setting up the RAG system, listing available knowledge
 bases, deleting knowledge bases, and providing an interactive CLI for querying
 the RAG system.
+
+Phase 3 enhancements:
+- Multiple RAG modes: basic, corrective, adaptive
+- Configurable via RAG_MODE environment variable
+
+Phase 4 enhancements:
+- Multi-agent orchestration mode
+- Specialized agents: Retriever, Summarizer, Critic
+- Supervisor-based coordination
+
+Phase 5 enhancements:
+- Persistent memory with SQLite checkpointer
+- LangSmith tracing integration
+- Query metrics tracking
 """
 
+import asyncio
 import os
 import shutil
 import time
 import uuid
-from typing import List
+from typing import List, Optional
 
-from langchain.schema import Document
+from langchain_core.documents import Document
 from langchain_chroma import Chroma
 from langchain_core.tools import tool
-from langgraph.checkpoint.memory import MemorySaver
 from langgraph.prebuilt import create_react_agent
 from rich.console import Console
 from rich.live import Live
@@ -27,14 +41,35 @@ from tqdm import tqdm
 from src.models.embeddings import get_embedding_model
 from src.models.llm import get_llm_model
 from src.utils.logger import custom_theme, get_logger  # Import custom_theme
+from src.utils.utilities import validate_file_paths, format_image_error_message
+
+# Phase 3: Advanced RAG patterns
+from src.graphs.corrective_rag import CorrectiveRAGGraph
+from src.graphs.adaptive_rag import AdaptiveRAGGraph
+
+# Phase 4: Multi-agent orchestration
+from src.agents.supervisor import MultiAgentSupervisor
+
+# Phase 5: Persistent memory and observability
+from src.checkpointing.sqlite_saver import get_checkpointer
+from src.observability.langsmith_tracer import setup_langsmith_tracing
+from src.observability.metrics import get_metrics_tracker
 
 # Setup logging
 logger = get_logger()
+
+# Initialize LangSmith tracing if configured
+setup_langsmith_tracing()
 
 # Initialize rich console with custom_theme
 console = Console(theme=custom_theme)
 
 KNOWLEDGE_BASE_DIR = "knowledges"
+
+
+def get_rag_mode() -> str:
+    """Get configured RAG mode from environment."""
+    return os.getenv("RAG_MODE", "basic").lower()
 
 
 def get_retriever_tool(vectorstore):
@@ -49,6 +84,15 @@ def get_retriever_tool(vectorstore):
 
 
 def setup_rag(documents: List[Document], knowledge_base_name: str, llm=None):
+    """
+    Setup RAG with selected mode.
+
+    Modes (configured via RAG_MODE env var):
+    - basic: Standard ReAct agent (default)
+    - corrective: Self-correcting RAG with relevance grading
+    - adaptive: Query-routed RAG with strategy selection
+    - multi_agent: Multi-agent orchestration with specialized agents
+    """
     logger.info(f"Setting up Agentic RAG for knowledge base: '{knowledge_base_name}'.")
     persist_directory = os.path.join(KNOWLEDGE_BASE_DIR, knowledge_base_name)
     logger.debug(f"Persist directory: {persist_directory}")
@@ -65,11 +109,31 @@ def setup_rag(documents: List[Document], knowledge_base_name: str, llm=None):
     logger.info(f"Embedding process for '{knowledge_base_name}' completed.")
     console.print(f"[success]Vector store for '{knowledge_base_name}' created successfully.[/success]")
     logger.info(f"Vector store for '{knowledge_base_name}' created successfully.")
+
     if not llm:
         llm = get_llm_model()
-    retrieve_tool = get_retriever_tool(vectorstore)
-    memory = MemorySaver()
-    agent = create_react_agent(llm, [retrieve_tool], checkpointer=memory)
+
+    memory = get_checkpointer()
+    rag_mode = get_rag_mode()
+
+    if rag_mode == "corrective":
+        logger.info("Setting up Corrective RAG mode")
+        console.print("[info]RAG Mode: Corrective[/info]")
+        agent = CorrectiveRAGGraph(vectorstore, llm, checkpointer=memory)
+    elif rag_mode == "adaptive":
+        logger.info("Setting up Adaptive RAG mode")
+        console.print("[info]RAG Mode: Adaptive[/info]")
+        agent = AdaptiveRAGGraph(vectorstore, llm, checkpointer=memory)
+    elif rag_mode == "multi_agent":
+        logger.info("Setting up Multi-Agent RAG mode")
+        console.print("[info]RAG Mode: Multi-Agent[/info]")
+        agent = MultiAgentSupervisor(vectorstore, llm, checkpointer=memory)
+    else:
+        logger.info("Setting up Basic RAG mode")
+        console.print("[info]RAG Mode: Basic[/info]")
+        retrieve_tool = get_retriever_tool(vectorstore)
+        agent = create_react_agent(llm, [retrieve_tool], checkpointer=memory)
+
     logger.info(f"Agentic RAG with memory setup completed for knowledge base: '{knowledge_base_name}'.")
     return agent
 
@@ -110,6 +174,15 @@ def delete_knowledge_base(knowledge_base_name: str) -> None:
 
 
 def load_rag_chain(knowledge_base_name: str, llm=None):
+    """
+    Load RAG chain with selected mode.
+
+    Modes (configured via RAG_MODE env var):
+    - basic: Standard ReAct agent (default)
+    - corrective: Self-correcting RAG with relevance grading
+    - adaptive: Query-routed RAG with strategy selection
+    - multi_agent: Multi-agent orchestration with specialized agents
+    """
     logger.info(f"Loading Agentic RAG for knowledge base: {knowledge_base_name}")
     persist_directory = os.path.join(KNOWLEDGE_BASE_DIR, knowledge_base_name)
     if not os.path.exists(persist_directory):
@@ -120,17 +193,46 @@ def load_rag_chain(knowledge_base_name: str, llm=None):
     logger.debug(f"Embedding model: {embeddings}")
     vectorstore = Chroma(persist_directory=persist_directory, embedding_function=embeddings)
     logger.debug("Vector store loaded.")
+
     if not llm:
         llm = get_llm_model()
-    retrieve_tool = get_retriever_tool(vectorstore)
-    memory = MemorySaver()
-    agent = create_react_agent(llm, [retrieve_tool], checkpointer=memory)
+
+    memory = get_checkpointer()
+    rag_mode = get_rag_mode()
+
+    if rag_mode == "corrective":
+        logger.info("Loading Corrective RAG mode")
+        console.print("[info]RAG Mode: Corrective[/info]")
+        agent = CorrectiveRAGGraph(vectorstore, llm, checkpointer=memory)
+    elif rag_mode == "adaptive":
+        logger.info("Loading Adaptive RAG mode")
+        console.print("[info]RAG Mode: Adaptive[/info]")
+        agent = AdaptiveRAGGraph(vectorstore, llm, checkpointer=memory)
+    elif rag_mode == "multi_agent":
+        logger.info("Loading Multi-Agent RAG mode")
+        console.print("[info]RAG Mode: Multi-Agent[/info]")
+        agent = MultiAgentSupervisor(vectorstore, llm, checkpointer=memory)
+    else:
+        logger.info("Loading Basic RAG mode")
+        console.print("[info]RAG Mode: Basic[/info]")
+        retrieve_tool = get_retriever_tool(vectorstore)
+        agent = create_react_agent(llm, [retrieve_tool], checkpointer=memory)
+
     logger.info(f"Agentic RAG with memory loaded for knowledge base: {knowledge_base_name}")
     return agent
 
 
 def interactive_cli() -> None:
+    """
+    Interactive CLI with support for multiple RAG modes.
+
+    Handles both sync (basic) and async (corrective, adaptive) agents.
+    Includes metrics tracking for query performance monitoring.
+    """
     logger.info("Starting interactive CLI.")
+
+    # Initialize metrics tracker
+    metrics = get_metrics_tracker()
     knowledge_bases = list_knowledge_bases()
     if not knowledge_bases:
         console.print("[error]No knowledge bases available. Please set up a RAG system first.[/error]")
@@ -163,6 +265,11 @@ def interactive_cli() -> None:
     if not agent:
         logger.error("Failed to load Agentic RAG for interactive CLI.")
         return
+
+    # Get RAG mode for handling async vs sync
+    rag_mode = get_rag_mode()
+    is_async_agent = rag_mode in ["corrective", "adaptive", "multi_agent"]
+
     # Ask for or generate a session/thread id for conversation memory
     session_id = input("Enter a session id for this conversation (leave blank to auto-generate): ").strip()
     if not session_id:
@@ -171,20 +278,67 @@ def interactive_cli() -> None:
     else:
         console.print(f"[info]Using session id: {session_id}[/info]")
     config = {"configurable": {"thread_id": session_id}}
-    console.print("[success]Interactive CLI started. Type 'exit' to quit.[/success]")
+    console.print(f"[success]Interactive CLI started (Mode: {rag_mode}). Type 'exit' to quit.[/success]")
     messages = []
     while True:
         query = console.input("[info]You: [/info]")
         if query.lower() == "exit":
             logger.info("Exiting interactive CLI.")
             break
+
+        # Validate query for image files before processing
+        is_valid, invalid_files = validate_file_paths(query)
+        if not is_valid:
+            error_message = format_image_error_message(invalid_files)
+            console.print(
+                Panel.fit(
+                    error_message,
+                    title="[error]Unsupported Image Input[/error]",
+                    border_style="red",
+                )
+            )
+            logger.warning(f"User query contained unsupported image files: {invalid_files}")
+            continue
+
         messages.append({"role": "user", "content": query})
-        with Live(Spinner("dots"), refresh_per_second=20):
-            time.sleep(1)
-            result = agent.invoke({"messages": messages}, config=config)
-            logger.info(f"Query: {query}, Result: {result}")
-        # Extract the final answer from the agent's output
-        answer = result["messages"][-1].content if "messages" in result and result["messages"] else str(result)
+
+        # Track query metrics
+        start_time = time.time()
+        success = True
+        error_msg = None
+        answer = ""
+
+        try:
+            with Live(Spinner("dots"), refresh_per_second=20):
+                time.sleep(0.5)
+                if is_async_agent:
+                    # Async agents (corrective, adaptive)
+                    answer = asyncio.run(agent.invoke(query, config=config))
+                    logger.info(f"Query: {query}, Answer: {answer[:100]}...")
+                else:
+                    # Basic ReAct agent
+                    result = agent.invoke({"messages": messages}, config=config)
+                    logger.info(f"Query: {query}, Result: {result}")
+                    # Extract the final answer from the agent's output
+                    answer = result["messages"][-1].content if "messages" in result and result["messages"] else str(result)
+        except Exception as e:
+            success = False
+            error_msg = str(e)
+            answer = f"Error processing query: {e}"
+            logger.error(f"Query failed: {e}")
+
+        # Log metrics
+        latency_ms = int((time.time() - start_time) * 1000)
+        metrics.log_query(
+            query=query,
+            latency_ms=latency_ms,
+            rag_mode=rag_mode,
+            knowledge_base=knowledge_base_name,
+            session_id=session_id,
+            success=success,
+            error=error_msg
+        )
+
         messages.append({"role": "assistant", "content": answer})
         markdown_content = Markdown(answer)
         console.print(

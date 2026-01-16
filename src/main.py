@@ -10,6 +10,7 @@ from src.utils.document_loader import DocumentLoader
 from src.utils.logger import custom_theme, setup_logger, toggle_logs
 from src.utils.rag_utils import delete_knowledge_base, interactive_cli, list_knowledge_bases, setup_rag
 from src.utils.utilities import generate_knowledge_base_name, get_version_from_git, normalize_file_path
+from src.observability.metrics import get_metrics_tracker
 
 # Load environment variables from .env file
 load_dotenv()
@@ -52,7 +53,8 @@ def cli_helper():
     table.add_row("3", "Delete Knowledge Base: Delete a specific knowledge base.")
     table.add_row("4", "Interactive CLI: Start an interactive CLI for querying the DocBases.")
     table.add_row("5", "Toggle Logs: Turn on or off all logs.")
-    table.add_row("6", "Exit: Exit the script.")
+    table.add_row("6", "View Metrics: Display performance metrics dashboard.")
+    table.add_row("7", "Exit: Exit the script.")
 
     console.print(table)
 
@@ -177,10 +179,10 @@ def main():
     while True:
         cli_helper()
         try:
-            action = int(input("Choose an action (0-6): ").strip())
+            action = int(input("Choose an action (0-7): ").strip())
             logger.info(f"User chose action: {action}")
         except ValueError:
-            console.print("[error]Invalid input. Please enter a number between 0 and 6.[/error]")
+            console.print("[error]Invalid input. Please enter a number between 0 and 7.[/error]")
             logger.error("Invalid action input.")
             continue
 
@@ -219,11 +221,21 @@ def main():
         elif action == 5:
             toggle_logs()
         elif action == 6:
+            # View metrics dashboard
+            try:
+                days = input("Enter number of days for metrics (default: 7): ").strip()
+                days = int(days) if days else 7
+            except ValueError:
+                days = 7
+            metrics = get_metrics_tracker()
+            metrics.display_dashboard(days=days)
+            logger.info(f"Displayed metrics dashboard for {days} days")
+        elif action == 7:
             console.print("[success]Exiting...[/success]")
             logger.info("Exiting application.")
             break
         else:
-            console.print("[error]Invalid action. Please choose a number between 0 and 6.[/error]")
+            console.print("[error]Invalid action. Please choose a number between 0 and 7.[/error]")
             logger.warning(f"Invalid action: {action}")
 
 

@@ -6,10 +6,10 @@ import os
 from typing import Optional
 
 from dotenv import load_dotenv
-from langchain_core.language_models import LLM
+from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_groq import ChatGroq
-from langchain_ollama import OllamaLLM
+from langchain_ollama import ChatOllama
 from langchain_openai import ChatOpenAI
 from rich.console import Console
 
@@ -28,7 +28,7 @@ def get_llm_model(
     model: Optional[str] = None,
     api_key: Optional[str] = None,
     api_base: Optional[str] = None,
-) -> LLM:
+) -> BaseChatModel:
     """Gets the LLM model based on the provided provider and model name.
 
     Args:
@@ -42,7 +42,7 @@ def get_llm_model(
             Defaults to None, read from env if present.
 
     Returns:
-        LLM: The configured LLM model.
+        BaseChatModel: The configured chat model with tool calling support.
     """
     if not provider:
         provider = os.getenv("LLM_PROVIDER")
@@ -96,7 +96,7 @@ def get_llm_model(
 
         elif provider == "ollama":
             console.print("[success]Using Ollama Model[/success]")
-            return OllamaLLM(model=model, base_url=api_base)
+            return ChatOllama(model=model, base_url=api_base)
 
         else:
             if not api_key:

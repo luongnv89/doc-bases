@@ -32,9 +32,9 @@ def mock_env_vars():
 def mock_embeddings():
     """Fixture to mock embedding instances."""
     with (
-        patch("langchain_openai.OpenAIEmbeddings") as mock_openai,
-        patch("langchain_ollama.OllamaEmbeddings") as mock_ollama,
-        patch("langchain_google_genai.GoogleGenerativeAIEmbeddings") as mock_google,
+        patch("src.models.embeddings.OpenAIEmbeddings") as mock_openai,
+        patch("src.models.embeddings.OllamaEmbeddings") as mock_ollama,
+        patch("src.models.embeddings.GoogleGenerativeAIEmbeddings") as mock_google,
     ):
         yield {
             "openai": mock_openai,
@@ -46,34 +46,33 @@ def mock_embeddings():
 # Tests
 def test_get_embedding_model_default(mock_env_vars, mock_embeddings):
     """Test get_embedding_model with default behavior (using environment variables)."""
-    embeddings = get_embedding_model()
-    assert isinstance(embeddings, Embeddings)
-    mock_embeddings["openai"].assert_called_once_with(openai_api_key=TEST_API_KEY, base_url=None)
+    # Clear EMB_API_BASE to test with base_url='' (empty string from env)
+    with patch.dict(os.environ, {"EMB_API_BASE": ""}, clear=False):
+        get_embedding_model()
+        # base_url will be empty string when EMB_API_BASE is set to ""
+        mock_embeddings["openai"].assert_called_once_with(openai_api_key=TEST_API_KEY, base_url="")
 
 
 def test_get_embedding_model_openai(mock_embeddings):
     """Test get_embedding_model for OpenAI provider."""
-    embeddings = get_embedding_model(
+    get_embedding_model(
         provider="openai",
         model=TEST_MODEL,
         api_key=TEST_API_KEY,
         api_base=TEST_API_BASE,
     )
-    assert isinstance(embeddings, Embeddings)
     mock_embeddings["openai"].assert_called_once_with(openai_api_key=TEST_API_KEY, base_url=TEST_API_BASE)
 
 
 def test_get_embedding_model_ollama(mock_embeddings):
     """Test get_embedding_model for Ollama provider."""
-    embeddings = get_embedding_model(provider="ollama", model=TEST_MODEL)
-    assert isinstance(embeddings, Embeddings)
+    get_embedding_model(provider="ollama", model=TEST_MODEL)
     mock_embeddings["ollama"].assert_called_once_with(model=TEST_MODEL)
 
 
 def test_get_embedding_model_google(mock_embeddings):
     """Test get_embedding_model for Google provider."""
-    embeddings = get_embedding_model(provider="google", model=TEST_MODEL, api_key=TEST_API_KEY)
-    assert isinstance(embeddings, Embeddings)
+    get_embedding_model(provider="google", model=TEST_MODEL, api_key=TEST_API_KEY)
     mock_embeddings["google"].assert_called_once_with(model=f"models/{TEST_MODEL}", google_api_key=TEST_API_KEY)
 
 
@@ -81,15 +80,15 @@ def test_get_embedding_model_custom_provider(mock_embeddings):
     """Test get_embedding_model for a custom provider."""
     custom_provider = "custom_provider"
     with patch.dict(os.environ, {f"{custom_provider.upper()}_API_KEY": TEST_API_KEY}):
-        embeddings = get_embedding_model(provider=custom_provider, model=TEST_MODEL, api_base=TEST_API_BASE)
-    assert isinstance(embeddings, Embeddings)
+        get_embedding_model(provider=custom_provider, model=TEST_MODEL, api_base=TEST_API_BASE)
     mock_embeddings["openai"].assert_called_once_with(openai_api_key=TEST_API_KEY, base_url=TEST_API_BASE)
 
 
 def test_get_embedding_model_missing_provider():
     """Test get_embedding_model with missing provider."""
-    with pytest.raises(ValueError, match="EMB_PROVIDER not found in environment variables."):
-        get_embedding_model(provider=None)
+    with patch.dict(os.environ, {"EMB_PROVIDER": ""}, clear=False):
+        with pytest.raises(ValueError, match="EMB_PROVIDER not found in environment variables."):
+            get_embedding_model(provider=None)
 
 
 def test_get_embedding_model_missing_model(mock_env_vars):
@@ -111,5 +110,5 @@ def test_get_embedding_model_missing_api_key(mock_env_vars):
 
 def test_get_embedding_model_unsupported_provider():
     """Test get_embedding_model with an unsupported provider."""
-    with pytest.raises(ValueError, match="Provider 'unsupported_provider' not supported and no api_key"):
+    with pytest.raises(ValueError, match="Provider 'unsupported_provider' not supported and no API key provided"):
         get_embedding_model(provider="unsupported_provider")

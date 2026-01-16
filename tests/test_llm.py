@@ -3,7 +3,7 @@ import os
 from unittest.mock import patch
 
 import pytest
-from langchain_core.language_models import LLM
+from langchain_core.language_models.chat_models import BaseChatModel
 
 from src.models.llm import get_llm_model
 
@@ -33,10 +33,10 @@ def mock_env_vars():
 def mock_llm():
     """Fixture to mock LLM instances."""
     with (
-        patch("langchain_google_genai.ChatGoogleGenerativeAI") as mock_google,
-        patch("langchain_openai.ChatOpenAI") as mock_openai,
-        patch("langchain_groq.ChatGroq") as mock_groq,
-        patch("langchain_ollama.OllamaLLM") as mock_ollama,
+        patch("src.models.llm.ChatGoogleGenerativeAI") as mock_google,
+        patch("src.models.llm.ChatOpenAI") as mock_openai,
+        patch("src.models.llm.ChatGroq") as mock_groq,
+        patch("src.models.llm.ChatOllama") as mock_ollama,
     ):
         yield {
             "google": mock_google,
@@ -49,41 +49,36 @@ def mock_llm():
 # Tests
 def test_get_llm_model_default(mock_env_vars, mock_llm):
     """Test get_llm_model with default behavior (using environment variables)."""
-    llm = get_llm_model()
-    assert isinstance(llm, LLM)
+    get_llm_model()
     mock_llm["google"].assert_called_once_with(model=TEST_MODEL, google_api_key=TEST_API_KEY)
 
 
 def test_get_llm_model_google(mock_llm):
     """Test get_llm_model for Google provider."""
-    llm = get_llm_model(provider="google", model=TEST_MODEL, api_key=TEST_API_KEY)
-    assert isinstance(llm, LLM)
+    get_llm_model(provider="google", model=TEST_MODEL, api_key=TEST_API_KEY)
     mock_llm["google"].assert_called_once_with(model=TEST_MODEL, google_api_key=TEST_API_KEY)
 
 
 def test_get_llm_model_openai(mock_llm):
     """Test get_llm_model for OpenAI provider."""
-    llm = get_llm_model(
+    get_llm_model(
         provider="openai",
         model=TEST_MODEL,
         api_key=TEST_API_KEY,
         api_base=TEST_API_BASE,
     )
-    assert isinstance(llm, LLM)
     mock_llm["openai"].assert_called_once_with(model=TEST_MODEL, openai_api_key=TEST_API_KEY, base_url=TEST_API_BASE)
 
 
 def test_get_llm_model_groq(mock_llm):
     """Test get_llm_model for Groq provider."""
-    llm = get_llm_model(provider="grok", model=TEST_MODEL, api_key=TEST_API_KEY)
-    assert isinstance(llm, LLM)
+    get_llm_model(provider="grok", model=TEST_MODEL, api_key=TEST_API_KEY)
     mock_llm["grok"].assert_called_once_with(api_key=TEST_API_KEY, model=TEST_MODEL)
 
 
 def test_get_llm_model_ollama(mock_llm):
     """Test get_llm_model for Ollama provider."""
-    llm = get_llm_model(provider="ollama", model=TEST_MODEL, api_base=TEST_API_BASE)
-    assert isinstance(llm, LLM)
+    get_llm_model(provider="ollama", model=TEST_MODEL, api_base=TEST_API_BASE)
     mock_llm["ollama"].assert_called_once_with(model=TEST_MODEL, base_url=TEST_API_BASE)
 
 
@@ -91,15 +86,15 @@ def test_get_llm_model_custom_provider(mock_llm):
     """Test get_llm_model for a custom provider."""
     custom_provider = "custom_provider"
     with patch.dict(os.environ, {f"{custom_provider.upper()}_API_KEY": TEST_API_KEY}):
-        llm = get_llm_model(provider=custom_provider, model=TEST_MODEL, api_base=TEST_API_BASE)
-    assert isinstance(llm, LLM)
+        get_llm_model(provider=custom_provider, model=TEST_MODEL, api_base=TEST_API_BASE)
     mock_llm["openai"].assert_called_once_with(model=TEST_MODEL, openai_api_key=TEST_API_KEY, base_url=TEST_API_BASE)
 
 
 def test_get_llm_model_missing_provider():
     """Test get_llm_model with missing provider."""
-    with pytest.raises(ValueError, match="LLM_PROVIDER not found in environment variables."):
-        get_llm_model(provider=None)
+    with patch.dict(os.environ, {"LLM_PROVIDER": ""}, clear=False):
+        with pytest.raises(ValueError, match="LLM_PROVIDER not found in environment variables."):
+            get_llm_model(provider=None)
 
 
 def test_get_llm_model_missing_model(mock_env_vars):
@@ -121,5 +116,5 @@ def test_get_llm_model_missing_api_key(mock_env_vars):
 
 def test_get_llm_model_unsupported_provider():
     """Test get_llm_model with an unsupported provider."""
-    with pytest.raises(ValueError, match="Provider 'unsupported_provider' not supported and no api_key"):
+    with pytest.raises(ValueError, match="Provider 'unsupported_provider' not supported and no API key provided"):
         get_llm_model(provider="unsupported_provider")
