@@ -1,8 +1,8 @@
 # DocBases
 
-**Advanced Retrieval-Augmented Generation (RAG) System with Multi-Agent Orchestration**
+**Intelligent Answers from Any Document**
 
-An intelligent document querying system that combines agentic workflows, advanced RAG patterns (Corrective & Adaptive), and multi-agent collaboration to provide accurate, context-aware answers from your knowledge bases.
+An advanced document querying system that combines agentic workflows, RAG patterns (Corrective, Adaptive, & Multi-Agent), and semantic intelligence to provide accurate, context-aware answers from your knowledge bases.
 
 ![DocBases](screenshot.png)
 
