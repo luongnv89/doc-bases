@@ -9,6 +9,12 @@ import typer
 from rich.console import Console
 from rich.panel import Panel
 
+from src.cli.commands import config as config_commands
+from src.cli.commands import health as health_commands
+from src.cli.commands import kb as kb_commands
+from src.cli.commands import query as query_commands
+from src.cli.commands import setup as setup_commands
+from src.cli.commands import test as test_commands
 from src.utils.logger import custom_theme
 from src.utils.utilities import get_version_from_git
 
@@ -39,6 +45,21 @@ def print_welcome() -> None:
             border_style="bold cyan",
         )
     )
+
+
+def _version_option() -> bool:
+    """Default for version option."""
+    return False
+
+
+def _verbose_option() -> bool:
+    """Default for verbose option."""
+    return False
+
+
+def _config_option() -> str | None:
+    """Default for config option."""
+    return None
 
 
 @app.callback(invoke_without_command=True)
@@ -92,13 +113,6 @@ def version() -> None:
 
 
 # Register command groups
-from src.cli.commands import config as config_commands
-from src.cli.commands import health as health_commands
-from src.cli.commands import kb as kb_commands
-from src.cli.commands import query as query_commands
-from src.cli.commands import setup as setup_commands
-from src.cli.commands import test as test_commands
-
 app.add_typer(config_commands.app, name="config", help="Configuration management")
 app.add_typer(setup_commands.app, name="setup", help="Setup and initialization")
 app.add_typer(kb_commands.app, name="kb", help="Knowledge base management")

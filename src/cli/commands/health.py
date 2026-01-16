@@ -70,7 +70,7 @@ def health_check(
         try:
             from src.models.llm import get_llm_model
 
-            llm_model = get_llm_model()
+            _ = get_llm_model()
             print_success(f"LLM OK: {config_mgr.get('llm.provider')} / {config_mgr.get('llm.model')}")
 
         except Exception as e:
@@ -83,7 +83,7 @@ def health_check(
         try:
             from src.models.embeddings import get_embedding_model
 
-            emb_model = get_embedding_model()
+            _ = get_embedding_model()
             print_success(f"Embeddings OK: {config_mgr.get('embedding.provider')} / {config_mgr.get('embedding.model')}")
 
         except Exception as e:

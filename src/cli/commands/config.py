@@ -66,10 +66,12 @@ def get(key: str = typer.Argument(..., help="Configuration key (e.g., 'llm.provi
         raise typer.Exit(1)
 
     # Mask secrets
-    if any(secret in key.lower() for secret in ["key", "token", "password", "api"]) and value:
-        display_value = "***"
-    else:
-        display_value = value
+    display_value = (
+        "***"
+        if any(secret in key.lower() for secret in ["key", "token", "password", "api"])
+        and value
+        else value
+    )
 
     console.print(f"[cyan]{key}[/cyan] = [green]{display_value}[/green]")
 

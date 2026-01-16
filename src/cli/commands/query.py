@@ -135,7 +135,7 @@ def single(
             from langchain_core.messages import HumanMessage
 
             input_data = {"messages": [HumanMessage(content=query)]}
-        except:
+        except Exception:
             input_data = {"messages": [{"role": "user", "content": query}]}
 
         # Invoke agent
@@ -252,7 +252,7 @@ def batch(
                 from langchain_core.messages import HumanMessage
 
                 input_data = {"messages": [HumanMessage(content=query_text)]}
-            except:
+            except Exception:
                 input_data = {"messages": [{"role": "user", "content": query_text}]}
 
             # Invoke agent

@@ -74,10 +74,9 @@ def add(
 
     # Check if KB already exists
     existing_kbs = list_knowledge_bases()
-    if kb_name in existing_kbs:
-        if not overwrite and not confirm(f"Knowledge base '{kb_name}' already exists. Overwrite?", default=False):
-            print_info("Cancelled")
-            raise typer.Exit(0)
+    if kb_name in existing_kbs and not overwrite and not confirm(f"Knowledge base '{kb_name}' already exists. Overwrite?", default=False):
+        print_info("Cancelled")
+        raise typer.Exit(0)
 
     # Setup RAG
     print_info("Setting up knowledge base with RAG...")

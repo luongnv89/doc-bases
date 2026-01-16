@@ -80,7 +80,7 @@ class ConfigManager:
         """Load configuration from all sources with priority."""
         # Start with defaults
         self._config = self._deep_copy(self.DEFAULT_CONFIG)
-        self._sources = {key: "default" for key in self._flatten_config(self._config)}
+        self._sources = dict.fromkeys(self._flatten_config(self._config), "default")
 
         # Load .env.example (lowest priority for env-based configs)
         self._load_env_vars_from_file(self.project_root / ".env.example")
@@ -264,7 +264,7 @@ class ConfigManager:
     def reset_to_defaults(self) -> None:
         """Reset configuration to defaults."""
         self._config = self._deep_copy(self.DEFAULT_CONFIG)
-        self._sources = {key: "default" for key in self._flatten_config(self._config)}
+        self._sources = dict.fromkeys(self._flatten_config(self._config), "default")
 
     @staticmethod
     def _deep_copy(obj: Any) -> Any:

@@ -8,17 +8,7 @@ from pathlib import Path
 import typer
 
 from src.cli.config_manager import get_config_manager
-from src.cli.utils import (
-    confirm,
-    console,
-    print_error,
-    print_info,
-    print_section,
-    print_success,
-    print_warning,
-    prompt_for_value,
-    run_command,
-)
+from src.cli.utils import confirm, console, print_error, print_info, print_section, print_success, print_warning, prompt_for_value, run_command
 
 app = typer.Typer(help="Setup and initialization")
 
