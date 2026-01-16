@@ -1,107 +1,183 @@
 # DocBases
 
-DocBases is a powerful **Retrieval-Augmented Generation (RAG)** system designed to help you query documents from various sources, including GitHub repositories, local files, folders, websites, and downloadable files. With an intuitive CLI, you can easily set up, manage, and interact with knowledge bases to retrieve information using natural language queries.
+**Advanced Retrieval-Augmented Generation (RAG) System with Multi-Agent Orchestration**
 
----
-![DocBases Screenshot](screenshot.png)
+An intelligent document querying system that combines agentic workflows, advanced RAG patterns (Corrective & Adaptive), and multi-agent collaboration to provide accurate, context-aware answers from your knowledge bases.
 
-## Features
+![DocBases](screenshot.png)
 
-- **Agentic RAG (Retrieval-Augmented Generation)**: Uses an agent that can reason over multiple steps, decide when to retrieve, and chain tool calls for complex queries.
-- **Multi-Turn Conversation Memory**: Each session maintains full conversational context, allowing for follow-up questions and context-aware answers.
-- **Multiple Document Sources**: Load documents from:
-  - GitHub repositories
-  - Local files
-  - Local folders
-  - Websites
-  - Downloadable files
-- **Knowledge Base Management**:
-  - Create new knowledge bases from your documents.
-  - List all available knowledge bases.
-  - Delete knowledge bases you no longer need.
-- **Interactive CLI**:
-  - Query your knowledge bases using natural language.
-  - Supports session IDs for persistent, resumable conversations.
-  - Multi-step reasoning and iterative tool use.
-  - Seamlessly switch between tasks or exit the app.
-- **Logging**:
-  - Toggle logs on or off for debugging and monitoring.
+## Quick Start
 
----
+### Installation
 
-## How to Use
-
-### Running the App
-To start DocBases, run:
 ```bash
+# Clone repository
+git clone https://github.com/luongnv89/doc-bases.git
+cd doc-bases
+
+# Create virtual environment
+python3.10 -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Copy environment template
+cp .env.example .env
+```
+
+### Basic Usage
+
+```bash
+# Start the application
 python src/main.py
 ```
 
-### Main Menu
-When the app starts, you’ll see a welcome message and a list of available commands:
+Then in the CLI:
+1. **Setup RAG** - Load documents from GitHub repos, local files, websites, or download URLs
+2. **Interactive CLI** - Query your knowledge bases with natural language
+3. **Manage Knowledge Bases** - List, delete, or switch between bases
+
+## Key Features
+
+- **Multi-RAG Modes**: Switch between Basic, Corrective, Adaptive, and Multi-Agent modes
+- **Advanced Document Processing**: Docling parser for PDFs with table extraction, semantic chunking
+- **Intelligent Query Routing**: Adaptive RAG routes simple/complex/web queries optimally
+- **Self-Correcting**: Corrective RAG validates retrieval, triggers web search if needed
+- **Multi-Agent Orchestration**: Specialized agents (Retriever, Summarizer, Critic) with supervisor
+- **Persistent Memory**: SQLite-backed session storage with resumable conversations
+- **Performance Observability**: LangSmith integration, metrics dashboard, query logging
+
+## Documentation
+
+- **[Architecture Guide](docs/ARCHITECTURE.md)** - System design, RAG patterns, agent workflows
+- **[API Reference](docs/API.md)** - Component interfaces, configuration, environment variables
+- **[Development Guide](docs/DEVELOPMENT.md)** - Setup, testing, contributing guidelines
+- **[Deployment Guide](docs/DEPLOYMENT.md)** - Production deployment, scaling considerations
+- **[Component Details](src/README.md)** - Module documentation and specific components
+
+## System Architecture
+
 ```
-========================================================
-    Welcome to DocBases! 🚀
-    Your AI-powered assistant for querying documents.
-    Version: <version>
-========================================================
+┌─────────────────────────────────────────────────────┐
+│            Interactive CLI Interface                 │
+└────────────────────┬────────────────────────────────┘
+                     │
+        ┌────────────┼────────────┐
+        │            │            │
+   ┌────▼──┐   ┌────▼──┐   ┌────▼──┐
+   │ Basic │   │Correct.│   │Adaptive│   ┌──────────┐
+   │  RAG  │   │  RAG   │   │  RAG   │───│Multi-Agt │
+   └────┬──┘   └────┬──┘   └────┬──┘   └──────────┘
+        │           │            │
+        └───────────┼────────────┘
+                    │
+        ┌───────────▼────────────┐
+        │   Document Retrieval    │
+        │   & Embedding Layer     │
+        └───────────┬────────────┘
+                    │
+        ┌───────────▼────────────┐
+        │    ChromaDB Vector      │
+        │        Store           │
+        └────────────────────────┘
 ```
 
-### Commands
-1. **Setup RAG**:
-   - Set up a new RAG system by loading documents from a source.
-   - Choose from the following sources:
-     - Repository URL
-     - Local File
-     - Local Folder
-     - Website URL
-     - Download File URL
-   - Provide the necessary input (e.g., URL or file path).
-   - A knowledge base will be created with a generated name.
+For detailed architecture, see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
-2. **List Knowledge Bases**:
-   - List all available knowledge bases.
+## Configuration
 
-3. **Delete Knowledge Base**:
-   - Delete a specific knowledge base by name.
+Key environment variables (see `.env.example` for complete list):
 
-4. **Interactive CLI**:
-   - Start an interactive CLI for querying the RAG system.
-   - Enter natural language queries to retrieve relevant information.
-   - After exiting the interactive CLI, you can choose to return to the main menu or exit the app.
+```env
+# LLM Provider
+LLM_PROVIDER=ollama          # Options: ollama, openai, google, groq
+LLM_MODEL=llama3.1:8b
 
-5. **Toggle Logs**:
-   - Turn on or off all logs for debugging and monitoring.
+# RAG Mode
+RAG_MODE=adaptive            # Options: basic, corrective, adaptive, multi_agent
 
-6. **Exit**:
-   - Exit the application.
+# Document Processing
+USE_DOCLING=true
+CHUNKING_STRATEGY=semantic   # Options: recursive, semantic
 
----
+# Persistence
+USE_PERSISTENT_MEMORY=true
+CHECKPOINT_DB_PATH=knowledges/checkpoints.db
 
-### Example Workflow
+# Observability
+LANGSMITH_TRACING=false
+```
 
-1. **Setup RAG**:
-   - Choose "Setup RAG" from the main menu.
-   - Select the source type (e.g., Repository URL).
-   - Provide the repository URL.
-   - The system will load the documents and create a knowledge base.
+See [docs/API.md](docs/API.md) for all configuration options.
 
-2. **Interactive CLI**:
-   - Choose "Interactive CLI" from the main menu.
-   - Enter queries to retrieve information from the knowledge base.
+## Use Cases
 
-3. **Delete Knowledge Base**:
-   - Choose "Delete Knowledge Base" from the main menu.
-   - Enter the name of the knowledge base to delete.
+### 1. Research & Knowledge Base Queries
+Load documentation, research papers, or knowledge bases and ask complex questions with multi-step reasoning.
 
----
+### 2. Document Analytics
+Analyze large document collections with semantic chunking and specialized agents for summarization.
 
-## Installation and Development
+### 3. Real-time Information
+Enable Adaptive RAG's web search for current events and external information not in your documents.
 
-For detailed installation instructions and development guidelines, please refer to the [INSTALLATION.md](INSTALLATION.md) file.
+### 4. Quality Assurance
+Use Corrective RAG's hallucination detection and critic agent to ensure answer accuracy.
 
----
+## Project Structure
+
+```
+doc-bases/
+├── src/
+│   ├── agents/              # Multi-agent system (Retriever, Summarizer, Critic, Supervisor)
+│   ├── graphs/              # LangGraph RAG workflows (Corrective, Adaptive)
+│   ├── evaluation/          # RAG quality evaluation (relevance grading, hallucination check)
+│   ├── tools/               # Specialized tools (web search)
+│   ├── checkpointing/       # Persistent memory (SQLite)
+│   ├── observability/       # Monitoring (LangSmith, metrics)
+│   ├── models/              # LLM and Embedding interfaces
+│   ├── utils/               # Document loading, RAG utilities, logging
+│   └── main.py              # CLI entry point
+├── docs/                    # Comprehensive documentation
+├── tests/                   # Test suite
+├── MODERNIZATION_PLAN.md    # Implementation roadmap (5 phases)
+└── requirements.txt         # Python dependencies
+```
+
+See [src/README.md](src/README.md) for detailed component breakdown.
+
+## Performance
+
+Typical metrics (varies by model & hardware):
+
+| Operation | Latency | Notes |
+|-----------|---------|-------|
+| Document Ingestion | ~100ms/doc | Includes parsing, embedding, storage |
+| Simple Query | 200-800ms | Direct retrieval + generation |
+| Complex Query | 1-3s | Multi-step with sub-queries |
+| Web Search Fallback | 2-5s | Corrective RAG when needed |
+| Critic Validation | +500ms | Multi-Agent mode refinement |
+
+## Contributing
+
+See [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) for:
+- Setting up development environment
+- Running tests and linting
+- Code structure conventions
+- Submitting contributions
 
 ## License
 
-This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.
+MIT License - see [LICENSE](LICENSE) for details
+
+## Support
+
+- **Issues**: [GitHub Issues](https://github.com/luongnv89/doc-bases/issues)
+- **Documentation**: [docs/](docs/)
+- **Examples**: See CLI interactive mode for walkthrough
+
+---
+
+**Status**: Production-ready v2.0 with advanced RAG patterns and multi-agent orchestration
+**Last Updated**: January 2026
