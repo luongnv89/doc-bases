@@ -4,16 +4,16 @@ SQLite-based persistent checkpointer for conversation memory.
 Provides durable conversation state that persists across application restarts.
 Uses LangGraph's SqliteSaver for checkpoint management.
 """
+
 import os
 import sqlite3
 from datetime import datetime, timedelta
-from typing import Optional, List, Tuple
 
-from langgraph.checkpoint.sqlite import SqliteSaver
 from langgraph.checkpoint.memory import MemorySaver
+from langgraph.checkpoint.sqlite import SqliteSaver
 from rich.console import Console
 
-from src.utils.logger import get_logger, custom_theme
+from src.utils.logger import custom_theme, get_logger
 
 logger = get_logger()
 console = Console(theme=custom_theme)
@@ -64,7 +64,7 @@ class PersistentCheckpointer:
         """
         return self.saver
 
-    def list_sessions(self, limit: int = 10) -> List[Tuple[str, str]]:
+    def list_sessions(self, limit: int = 10) -> list[tuple[str, str]]:
         """
         List recent conversation sessions.
 
@@ -75,13 +75,16 @@ class PersistentCheckpointer:
             List of (thread_id, last_active) tuples.
         """
         try:
-            cursor = self.conn.execute("""
+            cursor = self.conn.execute(
+                """
                 SELECT DISTINCT thread_id, MAX(created_at) as last_active
                 FROM checkpoints
                 GROUP BY thread_id
                 ORDER BY last_active DESC
                 LIMIT ?
-            """, (limit,))
+            """,
+                (limit,),
+            )
             sessions = cursor.fetchall()
             logger.info(f"Listed {len(sessions)} sessions")
             return sessions
@@ -105,9 +108,12 @@ class PersistentCheckpointer:
         """
         cutoff = datetime.now() - timedelta(days=days)
         try:
-            cursor = self.conn.execute("""
+            cursor = self.conn.execute(
+                """
                 DELETE FROM checkpoints WHERE created_at < ?
-            """, (cutoff.isoformat(),))
+            """,
+                (cutoff.isoformat(),),
+            )
             deleted = cursor.rowcount
             self.conn.commit()
             logger.info(f"Cleaned up {deleted} old checkpoint entries (older than {days} days)")
@@ -130,9 +136,12 @@ class PersistentCheckpointer:
             True if session was deleted, False otherwise.
         """
         try:
-            cursor = self.conn.execute("""
+            cursor = self.conn.execute(
+                """
                 DELETE FROM checkpoints WHERE thread_id = ?
-            """, (thread_id,))
+            """,
+                (thread_id,),
+            )
             self.conn.commit()
             deleted = cursor.rowcount > 0
             if deleted:
@@ -150,9 +159,11 @@ class PersistentCheckpointer:
             Number of unique sessions.
         """
         try:
-            cursor = self.conn.execute("""
+            cursor = self.conn.execute(
+                """
                 SELECT COUNT(DISTINCT thread_id) FROM checkpoints
-            """)
+            """
+            )
             count = cursor.fetchone()[0]
             return count
         except sqlite3.OperationalError:

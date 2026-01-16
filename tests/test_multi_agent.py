@@ -1,14 +1,16 @@
 """
 Tests for Phase 4: Multi-Agent Orchestration.
 """
+
 import os
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
-from unittest.mock import patch, MagicMock, AsyncMock
 from langchain_core.documents import Document
 
+from src.agents.critic_agent import CriticAgent, Critique
 from src.agents.retriever_agent import RetrieverAgent
 from src.agents.summarizer_agent import SummarizerAgent
-from src.agents.critic_agent import CriticAgent, Critique
 from src.agents.supervisor import MultiAgentSupervisor, SupervisorState
 from src.utils.rag_utils import get_rag_mode
 
@@ -30,10 +32,7 @@ class TestRetrieverAgent:
         """get_documents should return documents from vectorstore."""
         mock_vectorstore = MagicMock()
         mock_retriever = MagicMock()
-        mock_retriever.invoke.return_value = [
-            Document(page_content="Doc 1"),
-            Document(page_content="Doc 2")
-        ]
+        mock_retriever.invoke.return_value = [Document(page_content="Doc 1"), Document(page_content="Doc 2")]
         mock_vectorstore.as_retriever.return_value = mock_retriever
 
         mock_llm = MagicMock()
@@ -73,10 +72,7 @@ class TestSummarizerAgent:
         agent.summary_prompt = MagicMock()
         agent.summary_prompt.__or__ = MagicMock(return_value=mock_chain)
 
-        documents = [
-            Document(page_content="Content 1"),
-            Document(page_content="Content 2")
-        ]
+        documents = [Document(page_content="Content 1"), Document(page_content="Content 2")]
 
         result = await agent.summarize(documents, "test question")
         assert result == "This is a summary"
@@ -107,12 +103,7 @@ class TestCritiqueModel:
     def test_critique_creation(self):
         """Critique should be created with valid data."""
         critique = Critique(
-            accuracy_score=0.9,
-            completeness_score=0.8,
-            clarity_score=0.85,
-            issues=["Minor issue"],
-            suggestions=["Suggestion 1"],
-            needs_revision=False
+            accuracy_score=0.9, completeness_score=0.8, clarity_score=0.85, issues=["Minor issue"], suggestions=["Suggestion 1"], needs_revision=False
         )
 
         assert critique.accuracy_score == 0.9
@@ -123,12 +114,7 @@ class TestCritiqueModel:
 
     def test_critique_default_values(self):
         """Critique should have sensible defaults."""
-        critique = Critique(
-            accuracy_score=0.5,
-            completeness_score=0.5,
-            clarity_score=0.5,
-            needs_revision=True
-        )
+        critique = Critique(accuracy_score=0.5, completeness_score=0.5, clarity_score=0.5, needs_revision=True)
 
         assert critique.issues == []
         assert critique.suggestions == []
@@ -151,12 +137,7 @@ class TestCriticAgent:
         mock_llm = MagicMock()
         agent = CriticAgent(mock_llm)
 
-        critique = Critique(
-            accuracy_score=1.0,
-            completeness_score=1.0,
-            clarity_score=1.0,
-            needs_revision=False
-        )
+        critique = Critique(accuracy_score=1.0, completeness_score=1.0, clarity_score=1.0, needs_revision=False)
 
         score = agent.get_overall_score(critique)
         assert score == 1.0
@@ -167,10 +148,7 @@ class TestCriticAgent:
         agent = CriticAgent(mock_llm)
 
         critique = Critique(
-            accuracy_score=0.8,  # 0.5 weight
-            completeness_score=0.6,  # 0.3 weight
-            clarity_score=0.4,  # 0.2 weight
-            needs_revision=True
+            accuracy_score=0.8, completeness_score=0.6, clarity_score=0.4, needs_revision=True  # 0.5 weight  # 0.3 weight  # 0.2 weight
         )
 
         # 0.8*0.5 + 0.6*0.3 + 0.4*0.2 = 0.4 + 0.18 + 0.08 = 0.66
@@ -192,7 +170,7 @@ class TestSupervisorState:
             "answer": "",
             "critique": {},
             "iteration": 0,
-            "max_iterations": 3
+            "max_iterations": 3,
         }
 
         assert "question" in state
@@ -213,11 +191,7 @@ class TestMultiAgentSupervisor:
         mock_vectorstore = MagicMock()
         mock_llm = MagicMock()
 
-        supervisor = MultiAgentSupervisor(
-            mock_vectorstore,
-            mock_llm,
-            max_iterations=5
-        )
+        supervisor = MultiAgentSupervisor(mock_vectorstore, mock_llm, max_iterations=5)
 
         assert supervisor.vectorstore == mock_vectorstore
         assert supervisor.llm == mock_llm
@@ -242,7 +216,7 @@ class TestMultiAgentSupervisor:
             "answer": "",
             "critique": {},
             "iteration": 0,
-            "max_iterations": 3
+            "max_iterations": 3,
         }
 
         result = await supervisor.supervisor_routing(state)
@@ -265,7 +239,7 @@ class TestMultiAgentSupervisor:
             "answer": "",
             "critique": {},
             "iteration": 0,
-            "max_iterations": 3
+            "max_iterations": 3,
         }
 
         result = await supervisor.supervisor_routing(state)
@@ -288,7 +262,7 @@ class TestMultiAgentSupervisor:
             "answer": "",
             "critique": {},
             "iteration": 0,
-            "max_iterations": 3
+            "max_iterations": 3,
         }
 
         result = await supervisor.supervisor_routing(state)
@@ -311,7 +285,7 @@ class TestMultiAgentSupervisor:
             "answer": "Answer text",
             "critique": {},
             "iteration": 1,
-            "max_iterations": 3
+            "max_iterations": 3,
         }
 
         result = await supervisor.supervisor_routing(state)
@@ -334,7 +308,7 @@ class TestMultiAgentSupervisor:
             "answer": "Answer",
             "critique": {"needs_revision": False},
             "iteration": 2,
-            "max_iterations": 3
+            "max_iterations": 3,
         }
 
         result = await supervisor.supervisor_routing(state)
@@ -356,7 +330,7 @@ class TestMultiAgentSupervisor:
             "answer": "",
             "critique": {},
             "iteration": 0,
-            "max_iterations": 3
+            "max_iterations": 3,
         }
 
         result = supervisor.route_to_agent(state)
@@ -367,10 +341,7 @@ class TestMultiAgentSupervisor:
         """call_retriever should fetch documents."""
         mock_vectorstore = MagicMock()
         mock_retriever = MagicMock()
-        mock_retriever.ainvoke = AsyncMock(return_value=[
-            Document(page_content="Doc 1"),
-            Document(page_content="Doc 2")
-        ])
+        mock_retriever.ainvoke = AsyncMock(return_value=[Document(page_content="Doc 1"), Document(page_content="Doc 2")])
         mock_vectorstore.as_retriever.return_value = mock_retriever
 
         mock_llm = MagicMock()
@@ -386,7 +357,7 @@ class TestMultiAgentSupervisor:
             "answer": "",
             "critique": {},
             "iteration": 0,
-            "max_iterations": 3
+            "max_iterations": 3,
         }
 
         result = await supervisor.call_retriever(state)
@@ -409,7 +380,7 @@ class TestMultiAgentSupervisor:
             "answer": "Answer",
             "critique": {"overall_score": 0.85},
             "iteration": 2,
-            "max_iterations": 3
+            "max_iterations": 3,
         }
 
         summary = supervisor.get_workflow_summary(state)
@@ -454,7 +425,7 @@ class TestMultiAgentIntegration:
 
         supervisor = MultiAgentSupervisor(mock_vectorstore, mock_llm)
 
-        assert hasattr(supervisor, 'summarizer')
-        assert hasattr(supervisor, 'critic')
-        assert hasattr(supervisor, 'routing_prompt')
-        assert hasattr(supervisor, 'graph')
+        assert hasattr(supervisor, "summarizer")
+        assert hasattr(supervisor, "critic")
+        assert hasattr(supervisor, "routing_prompt")
+        assert hasattr(supervisor, "graph")

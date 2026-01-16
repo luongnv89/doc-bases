@@ -1,7 +1,7 @@
 """
 Specialized retriever agent with query decomposition.
 """
-from typing import List
+
 from langchain_core.documents import Document
 from langchain_core.tools import tool
 from langgraph.prebuilt import create_react_agent
@@ -41,7 +41,7 @@ Question: {complex_query}
 
 Return as numbered list."""
             response = llm.invoke(prompt)
-            return response.content if hasattr(response, 'content') else str(response)
+            return response.content if hasattr(response, "content") else str(response)
 
         tools = [retrieve_documents, decompose_query]
         return create_react_agent(self.llm, tools, checkpointer=self.checkpointer)
@@ -49,20 +49,16 @@ Return as numbered list."""
     async def retrieve(self, question: str, config: dict = None) -> dict:
         """Execute retrieval workflow."""
         result = await self.agent.ainvoke(
-            {"messages": [{"role": "user", "content": f"Retrieve relevant information for: {question}"}]},
-            config=config
+            {"messages": [{"role": "user", "content": f"Retrieve relevant information for: {question}"}]}, config=config
         )
         return result
 
     def retrieve_sync(self, question: str, config: dict = None) -> dict:
         """Execute retrieval workflow synchronously."""
-        result = self.agent.invoke(
-            {"messages": [{"role": "user", "content": f"Retrieve relevant information for: {question}"}]},
-            config=config
-        )
+        result = self.agent.invoke({"messages": [{"role": "user", "content": f"Retrieve relevant information for: {question}"}]}, config=config)
         return result
 
-    def get_documents(self, question: str, k: int = 5) -> List[Document]:
+    def get_documents(self, question: str, k: int = 5) -> list[Document]:
         """Direct document retrieval without agent."""
         retriever = self.vectorstore.as_retriever(search_kwargs={"k": k})
         return retriever.invoke(question)

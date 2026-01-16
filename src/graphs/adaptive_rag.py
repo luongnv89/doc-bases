@@ -6,12 +6,13 @@ Routes queries to optimal retrieval strategy:
 - Complex: Multi-step retrieval with reranking
 - Web: External web search for out-of-domain queries
 """
-from typing import TypedDict, List, Literal, Annotated
+
+from typing import Annotated, Literal, TypedDict
 
 from langchain_core.documents import Document
-from langchain_core.messages import BaseMessage, HumanMessage, AIMessage
+from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 from langchain_core.prompts import ChatPromptTemplate
-from langgraph.graph import StateGraph, END
+from langgraph.graph import END, StateGraph
 from langgraph.graph.message import add_messages
 
 from src.tools.web_search import web_search_to_documents
@@ -22,10 +23,11 @@ logger = get_logger()
 
 class AdaptiveRAGState(TypedDict):
     """State for Adaptive RAG workflow."""
-    messages: Annotated[List[BaseMessage], add_messages]
+
+    messages: Annotated[list[BaseMessage], add_messages]
     question: str
     query_type: Literal["simple", "complex", "web"] | None
-    documents: List[Document]
+    documents: list[Document]
     generation: str
 
 
@@ -39,16 +41,21 @@ class AdaptiveRAGGraph:
         self.llm = llm
         self.checkpointer = checkpointer
 
-        self.classification_prompt = ChatPromptTemplate.from_messages([
-            ("system", """Classify the query type:
+        self.classification_prompt = ChatPromptTemplate.from_messages(
+            [
+                (
+                    "system",
+                    """Classify the query type:
 
 - simple: Direct factual question, single document lookup
 - complex: Requires reasoning or multiple documents
 - web: Current events or external information
 
-Respond with ONLY: simple, complex, or web"""),
-            ("human", "{question}")
-        ])
+Respond with ONLY: simple, complex, or web""",
+                ),
+                ("human", "{question}"),
+            ]
+        )
 
         self.graph = self._build_graph()
         logger.info("AdaptiveRAGGraph initialized")
@@ -60,7 +67,7 @@ Respond with ONLY: simple, complex, or web"""),
         chain = self.classification_prompt | self.llm
         response = await chain.ainvoke({"question": state["question"]})
 
-        classification = response.content.strip().lower() if hasattr(response, 'content') else "simple"
+        classification = response.content.strip().lower() if hasattr(response, "content") else "simple"
 
         if classification not in ["simple", "complex", "web"]:
             classification = "simple"
@@ -91,15 +98,12 @@ Respond with ONLY: simple, complex, or web"""),
         initial_docs = await retriever.ainvoke(state["question"])
 
         # Generate sub-queries
-        subquery_prompt = ChatPromptTemplate.from_messages([
-            ("system", "Generate 2 related queries. One per line."),
-            ("human", "{question}")
-        ])
+        subquery_prompt = ChatPromptTemplate.from_messages([("system", "Generate 2 related queries. One per line."), ("human", "{question}")])
 
         chain = subquery_prompt | self.llm
         response = await chain.ainvoke({"question": state["question"]})
 
-        subqueries = response.content.strip().split("\n") if hasattr(response, 'content') else []
+        subqueries = response.content.strip().split("\n") if hasattr(response, "content") else []
 
         all_docs = list(initial_docs)
         for sq in subqueries[:2]:
@@ -145,7 +149,7 @@ Question: {state['question']}
 Answer:"""
 
         response = await self.llm.ainvoke(prompt)
-        state["generation"] = response.content if hasattr(response, 'content') else str(response)
+        state["generation"] = response.content if hasattr(response, "content") else str(response)
 
         state["messages"].append(HumanMessage(content=state["question"]))
         state["messages"].append(AIMessage(content=state["generation"]))
@@ -165,13 +169,7 @@ Answer:"""
         workflow.set_entry_point("classify")
 
         workflow.add_conditional_edges(
-            "classify",
-            self.route_query,
-            {
-                "simple": "simple_retrieval",
-                "complex": "complex_retrieval",
-                "web": "web_retrieval"
-            }
+            "classify", self.route_query, {"simple": "simple_retrieval", "complex": "complex_retrieval", "web": "web_retrieval"}
         )
 
         workflow.add_edge("simple_retrieval", "generate")
@@ -183,13 +181,7 @@ Answer:"""
 
     async def invoke(self, question: str, config: dict = None) -> str:
         """Run workflow."""
-        initial_state = {
-            "messages": [],
-            "question": question,
-            "query_type": None,
-            "documents": [],
-            "generation": ""
-        }
+        initial_state = {"messages": [], "question": question, "query_type": None, "documents": [], "generation": ""}
 
         result = await self.graph.ainvoke(initial_state, config=config)
         return result["generation"]

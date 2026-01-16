@@ -1,23 +1,15 @@
 """
 Tests for Phase 3: Corrective RAG implementation.
 """
+
 import os
-import pytest
-from unittest.mock import patch, MagicMock, AsyncMock
+from unittest.mock import MagicMock, patch
+
 from langchain_core.documents import Document
 
-from src.evaluation.rag_evaluator import (
-    RAGEvaluator,
-    RelevanceScore,
-    HallucinationCheck,
-)
-from src.tools.web_search import (
-    web_search,
-    web_search_to_documents,
-    is_web_search_available,
-    DUCKDUCKGO_AVAILABLE,
-)
+from src.evaluation.rag_evaluator import HallucinationCheck, RAGEvaluator, RelevanceScore
 from src.graphs.corrective_rag import CorrectiveRAGGraph, CRAGState
+from src.tools.web_search import DUCKDUCKGO_AVAILABLE, is_web_search_available, web_search_to_documents
 from src.utils.rag_utils import get_rag_mode
 
 
@@ -50,10 +42,7 @@ class TestHallucinationCheck:
 
     def test_hallucination_check_not_grounded(self):
         """HallucinationCheck should indicate ungrounded answer with claims."""
-        check = HallucinationCheck(
-            is_grounded=False,
-            unsupported_claims=["Claim 1", "Claim 2"]
-        )
+        check = HallucinationCheck(is_grounded=False, unsupported_claims=["Claim 1", "Claim 2"])
         assert check.is_grounded is False
         assert len(check.unsupported_claims) == 2
 
@@ -100,6 +89,7 @@ class TestWebSearch:
         """web_search should return message when unavailable."""
         # Need to reimport to get the patched value
         from src.tools.web_search import web_search as ws
+
         result = ws.invoke("test query")
         assert "unavailable" in result.lower() or "install" in result.lower()
 
@@ -123,7 +113,7 @@ class TestCorrectiveRAGGraph:
             "web_search_needed": False,
             "web_results": [],
             "generation": "",
-            "is_grounded": True
+            "is_grounded": True,
         }
         assert "question" in state
         assert "documents" in state
@@ -134,12 +124,7 @@ class TestCorrectiveRAGGraph:
         mock_vectorstore = MagicMock()
         mock_llm = MagicMock()
 
-        graph = CorrectiveRAGGraph(
-            vectorstore=mock_vectorstore,
-            llm=mock_llm,
-            relevance_threshold=0.6,
-            min_relevant_docs=2
-        )
+        graph = CorrectiveRAGGraph(vectorstore=mock_vectorstore, llm=mock_llm, relevance_threshold=0.6, min_relevant_docs=2)
 
         assert graph.vectorstore == mock_vectorstore
         assert graph.llm == mock_llm
@@ -161,7 +146,7 @@ class TestCorrectiveRAGGraph:
             "web_search_needed": True,
             "web_results": [],
             "generation": "",
-            "is_grounded": True
+            "is_grounded": True,
         }
 
         result = graph.decide_retrieval_quality(state)
@@ -182,7 +167,7 @@ class TestCorrectiveRAGGraph:
             "web_search_needed": False,
             "web_results": [],
             "generation": "",
-            "is_grounded": True
+            "is_grounded": True,
         }
 
         result = graph.decide_retrieval_quality(state)

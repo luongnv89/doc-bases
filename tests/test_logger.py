@@ -12,7 +12,7 @@ from src.utils.logger import get_logger, setup_logger, toggle_logs
 def create_fresh_logger():
     """Create a fresh logger with a temp log file and return (logger, log_file_path)."""
     # Create temp log file
-    with tempfile.NamedTemporaryFile(mode='w', suffix='.log', delete=False) as f:
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".log", delete=False) as f:
         temp_log_path = f.name
 
     # Get and clear the logger

@@ -3,7 +3,6 @@ import os
 from unittest.mock import patch
 
 import pytest
-from langchain_core.embeddings import Embeddings
 
 from src.models.embeddings import get_embedding_model
 

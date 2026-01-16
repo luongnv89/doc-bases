@@ -1,7 +1,7 @@
 """
 Summarizer agent for condensing documents.
 """
-from typing import List
+
 from langchain_core.documents import Document
 from langchain_core.prompts import ChatPromptTemplate
 
@@ -16,50 +16,52 @@ class SummarizerAgent:
     def __init__(self, llm):
         self.llm = llm
 
-        self.summary_prompt = ChatPromptTemplate.from_messages([
-            ("system", """Create concise summaries focused on answering questions.
-Extract the most relevant information and present it clearly."""),
-            ("human", """Summarize the following documents to help answer this question:
+        self.summary_prompt = ChatPromptTemplate.from_messages(
+            [
+                (
+                    "system",
+                    """Create concise summaries focused on answering questions.
+Extract the most relevant information and present it clearly.""",
+                ),
+                (
+                    "human",
+                    """Summarize the following documents to help answer this question:
 
 Question: {question}
 
 Documents:
 {documents}
 
-Provide a focused summary:""")
-        ])
+Provide a focused summary:""",
+                ),
+            ]
+        )
 
         logger.info("SummarizerAgent initialized")
 
-    async def summarize(self, documents: List[Document], question: str) -> str:
+    async def summarize(self, documents: list[Document], question: str) -> str:
         """Generate query-focused summary."""
         doc_text = "\n\n---\n\n".join([d.page_content for d in documents])
 
         chain = self.summary_prompt | self.llm
-        response = await chain.ainvoke({
-            "question": question,
-            "documents": doc_text
-        })
+        response = await chain.ainvoke({"question": question, "documents": doc_text})
 
-        result = response.content if hasattr(response, 'content') else str(response)
+        result = response.content if hasattr(response, "content") else str(response)
         logger.info(f"Generated summary of {len(result)} chars from {len(documents)} docs")
         return result
 
-    def summarize_sync(self, documents: List[Document], question: str) -> str:
+    def summarize_sync(self, documents: list[Document], question: str) -> str:
         """Generate query-focused summary synchronously."""
         doc_text = "\n\n---\n\n".join([d.page_content for d in documents])
 
         chain = self.summary_prompt | self.llm
-        response = chain.invoke({
-            "question": question,
-            "documents": doc_text
-        })
+        response = chain.invoke({"question": question, "documents": doc_text})
 
-        result = response.content if hasattr(response, 'content') else str(response)
+        result = response.content if hasattr(response, "content") else str(response)
         logger.info(f"Generated summary of {len(result)} chars from {len(documents)} docs")
         return result
 
-    async def map_reduce_summarize(self, documents: List[Document], question: str) -> str:
+    async def map_reduce_summarize(self, documents: list[Document], question: str) -> str:
         """Map-reduce summarization for large document sets."""
         if len(documents) <= 3:
             # Small enough to summarize directly
@@ -78,7 +80,7 @@ Provide a focused summary:""")
         logger.info(f"Map-reduce: {len(documents)} docs -> {len(summaries)} summaries -> final")
         return final
 
-    def extract_key_points(self, documents: List[Document], question: str, max_points: int = 5) -> List[str]:
+    def extract_key_points(self, documents: list[Document], question: str, max_points: int = 5) -> list[str]:
         """Extract key points from documents."""
         doc_text = "\n\n".join([d.page_content for d in documents])
 
@@ -91,7 +93,7 @@ Documents:
 Return as a numbered list of key points:"""
 
         response = self.llm.invoke(prompt)
-        content = response.content if hasattr(response, 'content') else str(response)
+        content = response.content if hasattr(response, "content") else str(response)
 
         # Parse numbered list
         lines = content.strip().split("\n")

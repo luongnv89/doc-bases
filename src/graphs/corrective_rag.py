@@ -9,11 +9,12 @@ Workflow:
 5. Check for hallucinations
 6. Return validated answer
 """
-from typing import TypedDict, List, Literal, Annotated
+
+from typing import Annotated, Literal, TypedDict
 
 from langchain_core.documents import Document
-from langchain_core.messages import BaseMessage, HumanMessage, AIMessage
-from langgraph.graph import StateGraph, END
+from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
+from langgraph.graph import END, StateGraph
 from langgraph.graph.message import add_messages
 
 from src.evaluation.rag_evaluator import RAGEvaluator
@@ -25,12 +26,13 @@ logger = get_logger()
 
 class CRAGState(TypedDict):
     """State for Corrective RAG workflow."""
-    messages: Annotated[List[BaseMessage], add_messages]
+
+    messages: Annotated[list[BaseMessage], add_messages]
     question: str
-    documents: List[Document]
-    relevant_docs: List[Document]
+    documents: list[Document]
+    relevant_docs: list[Document]
     web_search_needed: bool
-    web_results: List[Document]
+    web_results: list[Document]
     generation: str
     is_grounded: bool
 
@@ -40,14 +42,7 @@ class CorrectiveRAGGraph:
     Self-corrective RAG with relevance grading and web search fallback.
     """
 
-    def __init__(
-        self,
-        vectorstore,
-        llm,
-        checkpointer=None,
-        relevance_threshold: float = 0.5,
-        min_relevant_docs: int = 1
-    ):
+    def __init__(self, vectorstore, llm, checkpointer=None, relevance_threshold: float = 0.5, min_relevant_docs: int = 1):
         self.vectorstore = vectorstore
         self.llm = llm
         self.checkpointer = checkpointer
@@ -75,10 +70,7 @@ class CorrectiveRAGGraph:
 
         relevant_docs = []
         for doc in state["documents"]:
-            score = await self.evaluator.grade_relevance(
-                state["question"],
-                doc.page_content
-            )
+            score = await self.evaluator.grade_relevance(state["question"], doc.page_content)
             if score.score >= self.relevance_threshold:
                 relevant_docs.append(doc)
 
@@ -122,7 +114,7 @@ Question: {state['question']}
 Answer:"""
 
         response = await self.llm.ainvoke(prompt)
-        state["generation"] = response.content if hasattr(response, 'content') else str(response)
+        state["generation"] = response.content if hasattr(response, "content") else str(response)
 
         state["messages"].append(HumanMessage(content=state["question"]))
         state["messages"].append(AIMessage(content=state["generation"]))
@@ -156,11 +148,7 @@ Answer:"""
         workflow.set_entry_point("retrieve")
         workflow.add_edge("retrieve", "grade_documents")
 
-        workflow.add_conditional_edges(
-            "grade_documents",
-            self.decide_retrieval_quality,
-            {"generate": "generate", "web_search": "web_search"}
-        )
+        workflow.add_conditional_edges("grade_documents", self.decide_retrieval_quality, {"generate": "generate", "web_search": "web_search"})
 
         workflow.add_edge("web_search", "generate")
         workflow.add_edge("generate", "check_hallucination")
@@ -178,7 +166,7 @@ Answer:"""
             "web_search_needed": False,
             "web_results": [],
             "generation": "",
-            "is_grounded": True
+            "is_grounded": True,
         }
 
         result = await self.graph.ainvoke(initial_state, config=config)

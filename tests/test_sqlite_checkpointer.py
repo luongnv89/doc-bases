@@ -7,20 +7,15 @@ Tests cover:
 - MetricsTracker
 - LangSmith tracing setup
 """
+
 import os
 import sqlite3
 import tempfile
-import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 from src.checkpointing.sqlite_saver import PersistentCheckpointer, get_checkpointer
+from src.observability.langsmith_tracer import disable_langsmith_tracing, get_tracing_status, is_tracing_enabled, setup_langsmith_tracing
 from src.observability.metrics import MetricsTracker, get_metrics_tracker
-from src.observability.langsmith_tracer import (
-    setup_langsmith_tracing,
-    disable_langsmith_tracing,
-    is_tracing_enabled,
-    get_tracing_status
-)
 
 
 class TestPersistentCheckpointer:
@@ -144,9 +139,7 @@ class TestMetricsTracker:
 
             # Check table exists
             conn = sqlite3.connect(db_path)
-            cursor = conn.execute(
-                "SELECT name FROM sqlite_master WHERE type='table' AND name='query_metrics'"
-            )
+            cursor = conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='query_metrics'")
             tables = cursor.fetchall()
             conn.close()
 
@@ -159,14 +152,7 @@ class TestMetricsTracker:
             db_path = os.path.join(tmpdir, "test_metrics.db")
             tracker = MetricsTracker(db_path=db_path)
 
-            tracker.log_query(
-                query="test query",
-                latency_ms=100,
-                rag_mode="basic",
-                knowledge_base="test_kb",
-                session_id="test_session",
-                success=True
-            )
+            tracker.log_query(query="test query", latency_ms=100, rag_mode="basic", knowledge_base="test_kb", session_id="test_session", success=True)
 
             # Verify data was stored
             conn = sqlite3.connect(db_path)
@@ -183,20 +169,11 @@ class TestMetricsTracker:
             db_path = os.path.join(tmpdir, "test_metrics.db")
             tracker = MetricsTracker(db_path=db_path)
 
-            tracker.log_query(
-                query="failing query",
-                latency_ms=500,
-                rag_mode="corrective",
-                success=False,
-                error="Test error message"
-            )
+            tracker.log_query(query="failing query", latency_ms=500, rag_mode="corrective", success=False, error="Test error message")
 
             # Verify error was stored
             conn = sqlite3.connect(db_path)
-            cursor = conn.execute(
-                "SELECT success, error FROM query_metrics WHERE query = ?",
-                ("failing query",)
-            )
+            cursor = conn.execute("SELECT success, error FROM query_metrics WHERE query = ?", ("failing query",))
             row = cursor.fetchone()
             conn.close()
 
@@ -225,21 +202,10 @@ class TestMetricsTracker:
 
             # Add some test queries
             for i in range(5):
-                tracker.log_query(
-                    query=f"query {i}",
-                    latency_ms=100 + i * 10,
-                    rag_mode="basic",
-                    success=True
-                )
+                tracker.log_query(query=f"query {i}", latency_ms=100 + i * 10, rag_mode="basic", success=True)
 
             # Add one failed query
-            tracker.log_query(
-                query="failed query",
-                latency_ms=500,
-                rag_mode="corrective",
-                success=False,
-                error="Error"
-            )
+            tracker.log_query(query="failed query", latency_ms=500, rag_mode="corrective", success=False, error="Error")
 
             stats = tracker.get_stats(days=7)
 
@@ -254,13 +220,7 @@ class TestMetricsTracker:
             db_path = os.path.join(tmpdir, "test_metrics.db")
             tracker = MetricsTracker(db_path=db_path)
 
-            tracker.log_query(
-                query="error query",
-                latency_ms=100,
-                rag_mode="basic",
-                success=False,
-                error="Test error"
-            )
+            tracker.log_query(query="error query", latency_ms=100, rag_mode="basic", success=False, error="Test error")
 
             errors = tracker.get_recent_errors(limit=10)
 
@@ -275,11 +235,7 @@ class TestMetricsTracker:
             tracker = MetricsTracker(db_path=db_path)
 
             # Add a recent query
-            tracker.log_query(
-                query="recent query",
-                latency_ms=100,
-                rag_mode="basic"
-            )
+            tracker.log_query(query="recent query", latency_ms=100, rag_mode="basic")
 
             # Cleanup (0 days should remove everything)
             deleted = tracker.cleanup_old_metrics(days=0)
@@ -299,6 +255,7 @@ class TestGetMetricsTracker:
             with patch.dict(os.environ, {"METRICS_DB_PATH": db_path}):
                 # Reset global singleton
                 import src.observability.metrics as metrics_module
+
                 metrics_module._metrics_tracker = None
 
                 tracker = get_metrics_tracker()
@@ -316,19 +273,13 @@ class TestLangSmithTracer:
 
     def test_setup_tracing_requires_api_key(self):
         """Test that tracing requires API key."""
-        with patch.dict(os.environ, {
-            "LANGSMITH_TRACING": "true",
-            "LANGSMITH_API_KEY": ""
-        }, clear=False):
+        with patch.dict(os.environ, {"LANGSMITH_TRACING": "true", "LANGSMITH_API_KEY": ""}, clear=False):
             result = setup_langsmith_tracing()
             assert result is False
 
     def test_setup_tracing_success(self):
         """Test successful tracing setup."""
-        with patch.dict(os.environ, {
-            "LANGSMITH_TRACING": "true",
-            "LANGSMITH_API_KEY": "test_key"
-        }, clear=False):
+        with patch.dict(os.environ, {"LANGSMITH_TRACING": "true", "LANGSMITH_API_KEY": "test_key"}, clear=False):
             result = setup_langsmith_tracing()
             assert result is True
             assert os.environ.get("LANGCHAIN_TRACING_V2") == "true"
@@ -352,11 +303,9 @@ class TestLangSmithTracer:
 
     def test_get_tracing_status(self):
         """Test get_tracing_status returns correct info."""
-        with patch.dict(os.environ, {
-            "LANGCHAIN_TRACING_V2": "true",
-            "LANGCHAIN_PROJECT": "test_project",
-            "LANGCHAIN_API_KEY": "test_key"
-        }, clear=False):
+        with patch.dict(
+            os.environ, {"LANGCHAIN_TRACING_V2": "true", "LANGCHAIN_PROJECT": "test_project", "LANGCHAIN_API_KEY": "test_key"}, clear=False
+        ):
             status = get_tracing_status()
             assert status["enabled"] is True
             assert status["project"] == "test_project"

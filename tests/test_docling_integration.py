@@ -1,22 +1,16 @@
 """
 Tests for Phase 2: Docling integration and semantic chunking.
 """
+
 import os
+from unittest.mock import MagicMock, patch
+
 import pytest
-from unittest.mock import patch, MagicMock
 from langchain_core.documents import Document
 
-from src.utils.docling_loader import (
-    DoclingDocumentLoader,
-    is_docling_available,
-    DOCLING_AVAILABLE,
-)
-from src.utils.semantic_splitter import (
-    SemanticDocumentSplitter,
-    get_chunking_strategy,
-    is_semantic_chunker_available,
-)
+from src.utils.docling_loader import DOCLING_AVAILABLE, DoclingDocumentLoader, is_docling_available
 from src.utils.document_loader import DocumentLoader, _use_docling
+from src.utils.semantic_splitter import SemanticDocumentSplitter, get_chunking_strategy, is_semantic_chunker_available
 
 
 class TestDoclingAvailability:
@@ -155,16 +149,12 @@ class TestDocumentLoaderWithDocling:
 
     @patch("src.utils.document_loader._use_docling", return_value=True)
     @patch("src.utils.document_loader.DoclingDocumentLoader")
-    def test_load_single_document_uses_docling_when_enabled(
-        self, mock_docling_class, mock_use_docling
-    ):
+    def test_load_single_document_uses_docling_when_enabled(self, mock_docling_class, mock_use_docling):
         """_load_single_document should try Docling first when enabled."""
         # Setup mock
         mock_docling_instance = MagicMock()
         mock_docling_instance.supports_format.return_value = True
-        mock_docling_instance.load_document.return_value = [
-            Document(page_content="Test content", metadata={"source": "test.pdf"})
-        ]
+        mock_docling_instance.load_document.return_value = [Document(page_content="Test content", metadata={"source": "test.pdf"})]
         mock_docling_class.return_value = mock_docling_instance
 
         loader = DocumentLoader()
@@ -180,16 +170,12 @@ class TestDocumentLoaderWithDocling:
     @patch("src.utils.document_loader._use_docling", return_value=False)
     @patch("src.utils.document_loader.magic")
     @patch("src.utils.document_loader.TextLoader")
-    def test_load_single_document_fallback_when_docling_disabled(
-        self, mock_text_loader, mock_magic, mock_use_docling
-    ):
+    def test_load_single_document_fallback_when_docling_disabled(self, mock_text_loader, mock_magic, mock_use_docling):
         """_load_single_document should use fallback when Docling is disabled."""
         # Setup mocks
         mock_magic.from_file.return_value = "text/plain"
         mock_loader_instance = MagicMock()
-        mock_loader_instance.load.return_value = [
-            Document(page_content="Text content", metadata={"source": "test.txt"})
-        ]
+        mock_loader_instance.load.return_value = [Document(page_content="Text content", metadata={"source": "test.txt"})]
         mock_text_loader.return_value = mock_loader_instance
 
         loader = DocumentLoader()
@@ -203,10 +189,7 @@ class TestDocumentLoaderWithDocling:
 class TestSemanticDocumentSplitter:
     """Test SemanticDocumentSplitter class."""
 
-    @pytest.mark.skipif(
-        not is_semantic_chunker_available(),
-        reason="langchain-experimental not installed"
-    )
+    @pytest.mark.skipif(not is_semantic_chunker_available(), reason="langchain-experimental not installed")
     def test_initialization_with_custom_embeddings(self):
         """SemanticDocumentSplitter should accept custom embeddings."""
         mock_embeddings = MagicMock()
@@ -235,9 +218,7 @@ class TestDocumentLoaderChunkingStrategy:
 
     @patch("src.utils.document_loader.get_chunking_strategy", return_value="semantic")
     @patch("src.utils.document_loader.is_semantic_chunker_available", return_value=False)
-    def test_split_falls_back_when_semantic_unavailable(
-        self, mock_available, mock_strategy
-    ):
+    def test_split_falls_back_when_semantic_unavailable(self, mock_available, mock_strategy):
         """Should fall back to recursive when semantic is unavailable."""
         loader = DocumentLoader()
         documents = [Document(page_content="Test content " * 100, metadata={})]

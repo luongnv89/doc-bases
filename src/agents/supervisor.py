@@ -1,16 +1,17 @@
 """
 Supervisor for multi-agent orchestration.
 """
-from typing import TypedDict, Literal, Annotated, List
+
+from typing import Annotated, Literal, TypedDict
 
 from langchain_core.documents import Document
-from langchain_core.messages import BaseMessage, HumanMessage, AIMessage
+from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 from langchain_core.prompts import ChatPromptTemplate
-from langgraph.graph import StateGraph, END
+from langgraph.graph import END, StateGraph
 from langgraph.graph.message import add_messages
 
-from src.agents.summarizer_agent import SummarizerAgent
 from src.agents.critic_agent import CriticAgent
+from src.agents.summarizer_agent import SummarizerAgent
 from src.utils.logger import get_logger
 
 logger = get_logger()
@@ -18,10 +19,11 @@ logger = get_logger()
 
 class SupervisorState(TypedDict):
     """State for multi-agent supervisor workflow."""
-    messages: Annotated[List[BaseMessage], add_messages]
+
+    messages: Annotated[list[BaseMessage], add_messages]
     question: str
     next_agent: Literal["retriever", "summarizer", "generator", "critic", "END"] | None
-    documents: List[Document]
+    documents: list[Document]
     summary: str
     answer: str
     critique: dict
@@ -50,8 +52,11 @@ class MultiAgentSupervisor:
         self.summarizer = SummarizerAgent(llm)
         self.critic = CriticAgent(llm)
 
-        self.routing_prompt = ChatPromptTemplate.from_messages([
-            ("system", """You are a workflow coordinator. Based on the current state, decide the next step:
+        self.routing_prompt = ChatPromptTemplate.from_messages(
+            [
+                (
+                    "system",
+                    """You are a workflow coordinator. Based on the current state, decide the next step:
 
 - retriever: Need to fetch documents (no documents yet)
 - summarizer: Have documents, need to condense them (no summary yet)
@@ -59,8 +64,11 @@ class MultiAgentSupervisor:
 - critic: Have answer, need to validate quality
 - END: Task is complete (have validated answer or max iterations reached)
 
-Respond with ONLY one word: retriever, summarizer, generator, critic, or END"""),
-            ("human", """Current State:
+Respond with ONLY one word: retriever, summarizer, generator, critic, or END""",
+                ),
+                (
+                    "human",
+                    """Current State:
 - Question: {question}
 - Has Documents: {has_docs}
 - Has Summary: {has_summary}
@@ -68,8 +76,10 @@ Respond with ONLY one word: retriever, summarizer, generator, critic, or END""")
 - Iteration: {iteration}/{max_iter}
 - Last Critique: {critique}
 
-What's the next step?""")
-        ])
+What's the next step?""",
+                ),
+            ]
+        )
 
         self.graph = self._build_graph()
         logger.info("MultiAgentSupervisor initialized")
@@ -150,7 +160,7 @@ Question: {state['question']}
 Provide a comprehensive answer:"""
 
         response = await self.llm.ainvoke(prompt)
-        state["answer"] = response.content if hasattr(response, 'content') else str(response)
+        state["answer"] = response.content if hasattr(response, "content") else str(response)
 
         logger.info(f"Generator: created answer of {len(state['answer'])} chars")
         return state
@@ -169,13 +179,10 @@ Provide a comprehensive answer:"""
             "needs_revision": critique.needs_revision,
             "issues": critique.issues,
             "suggestions": critique.suggestions,
-            "overall_score": self.critic.get_overall_score(critique)
+            "overall_score": self.critic.get_overall_score(critique),
         }
 
-        logger.info(
-            f"Critic: overall score {state['critique']['overall_score']}, "
-            f"needs_revision={critique.needs_revision}"
-        )
+        logger.info(f"Critic: overall score {state['critique']['overall_score']}, " f"needs_revision={critique.needs_revision}")
 
         # If revision needed and we have iterations left, clear the answer to regenerate
         if critique.needs_revision and state["iteration"] < state["max_iterations"]:
@@ -212,13 +219,7 @@ Provide a comprehensive answer:"""
         workflow.add_conditional_edges(
             "supervisor",
             self.route_to_agent,
-            {
-                "retriever": "retriever",
-                "summarizer": "summarizer",
-                "generator": "generator",
-                "critic": "critic",
-                "END": "finalize"
-            }
+            {"retriever": "retriever", "summarizer": "summarizer", "generator": "generator", "critic": "critic", "END": "finalize"},
         )
 
         # All agents return to supervisor for next decision
@@ -241,7 +242,7 @@ Provide a comprehensive answer:"""
             "answer": "",
             "critique": {},
             "iteration": 0,
-            "max_iterations": self.max_iterations
+            "max_iterations": self.max_iterations,
         }
 
         result = await self.graph.ainvoke(initial_state, config=config)
@@ -256,5 +257,5 @@ Provide a comprehensive answer:"""
             "answer_length": len(state["answer"]) if state["answer"] else 0,
             "iterations": state["iteration"],
             "final_score": state["critique"].get("overall_score", None),
-            "critique": state["critique"]
+            "critique": state["critique"],
         }

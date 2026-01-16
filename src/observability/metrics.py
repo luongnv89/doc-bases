@@ -8,15 +8,15 @@ Tracks:
 - RAG mode usage
 - Session activity
 """
+
 import os
 import sqlite3
 from datetime import datetime, timedelta
-from typing import Dict, Optional, List
 
 from rich.console import Console
 from rich.table import Table
 
-from src.utils.logger import get_logger, custom_theme
+from src.utils.logger import custom_theme, get_logger
 
 logger = get_logger()
 console = Console(theme=custom_theme)
@@ -30,7 +30,7 @@ class MetricsTracker:
     for viewing performance statistics.
     """
 
-    def __init__(self, db_path: Optional[str] = None):
+    def __init__(self, db_path: str | None = None):
         """
         Initialize metrics tracker.
 
@@ -56,7 +56,8 @@ class MetricsTracker:
 
     def _init_tables(self) -> None:
         """Create metrics tables if they don't exist."""
-        self.conn.execute("""
+        self.conn.execute(
+            """
             CREATE TABLE IF NOT EXISTS query_metrics (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 timestamp TEXT NOT NULL,
@@ -69,13 +70,16 @@ class MetricsTracker:
                 success BOOLEAN DEFAULT TRUE,
                 error TEXT
             )
-        """)
+        """
+        )
 
         # Create index for efficient time-based queries
-        self.conn.execute("""
+        self.conn.execute(
+            """
             CREATE INDEX IF NOT EXISTS idx_query_metrics_timestamp
             ON query_metrics(timestamp)
-        """)
+        """
+        )
 
         self.conn.commit()
 
@@ -85,10 +89,10 @@ class MetricsTracker:
         latency_ms: int,
         retrieval_count: int = 0,
         rag_mode: str = "basic",
-        knowledge_base: Optional[str] = None,
-        session_id: Optional[str] = None,
+        knowledge_base: str | None = None,
+        session_id: str | None = None,
         success: bool = True,
-        error: Optional[str] = None
+        error: str | None = None,
     ) -> None:
         """
         Log a query metric.
@@ -103,26 +107,19 @@ class MetricsTracker:
             success: Whether the query succeeded.
             error: Error message if query failed.
         """
-        self.conn.execute("""
+        self.conn.execute(
+            """
             INSERT INTO query_metrics
             (timestamp, query, latency_ms, retrieval_count, rag_mode, knowledge_base, session_id, success, error)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (
-            datetime.now().isoformat(),
-            query,
-            latency_ms,
-            retrieval_count,
-            rag_mode,
-            knowledge_base,
-            session_id,
-            success,
-            error
-        ))
+        """,
+            (datetime.now().isoformat(), query, latency_ms, retrieval_count, rag_mode, knowledge_base, session_id, success, error),
+        )
         self.conn.commit()
 
         logger.debug(f"Logged query metric: {latency_ms}ms, mode={rag_mode}, success={success}")
 
-    def get_stats(self, days: int = 7) -> Dict:
+    def get_stats(self, days: int = 7) -> dict:
         """
         Get aggregated statistics for the specified period.
 
@@ -135,57 +132,61 @@ class MetricsTracker:
         cutoff = (datetime.now() - timedelta(days=days)).isoformat()
 
         # Total queries
-        total = self.conn.execute(
-            "SELECT COUNT(*) FROM query_metrics WHERE timestamp > ?", (cutoff,)
-        ).fetchone()[0]
+        total = self.conn.execute("SELECT COUNT(*) FROM query_metrics WHERE timestamp > ?", (cutoff,)).fetchone()[0]
 
         # Successful queries
-        success = self.conn.execute(
-            "SELECT COUNT(*) FROM query_metrics WHERE timestamp > ? AND success = TRUE", (cutoff,)
-        ).fetchone()[0]
+        success = self.conn.execute("SELECT COUNT(*) FROM query_metrics WHERE timestamp > ? AND success = TRUE", (cutoff,)).fetchone()[0]
 
         # Average latency
-        avg_latency = self.conn.execute(
-            "SELECT AVG(latency_ms) FROM query_metrics WHERE timestamp > ?", (cutoff,)
-        ).fetchone()[0] or 0
+        avg_latency = self.conn.execute("SELECT AVG(latency_ms) FROM query_metrics WHERE timestamp > ?", (cutoff,)).fetchone()[0] or 0
 
         # P50 latency
-        p50_latency = self.conn.execute("""
+        p50_latency = self.conn.execute(
+            """
             SELECT latency_ms FROM query_metrics
             WHERE timestamp > ?
             ORDER BY latency_ms
             LIMIT 1 OFFSET (SELECT COUNT(*) / 2 FROM query_metrics WHERE timestamp > ?)
-        """, (cutoff, cutoff)).fetchone()
+        """,
+            (cutoff, cutoff),
+        ).fetchone()
         p50_latency = p50_latency[0] if p50_latency else 0
 
         # P95 latency
-        p95_latency = self.conn.execute("""
+        p95_latency = self.conn.execute(
+            """
             SELECT latency_ms FROM query_metrics
             WHERE timestamp > ?
             ORDER BY latency_ms
             LIMIT 1 OFFSET (SELECT COUNT(*) * 95 / 100 FROM query_metrics WHERE timestamp > ?)
-        """, (cutoff, cutoff)).fetchone()
+        """,
+            (cutoff, cutoff),
+        ).fetchone()
         p95_latency = p95_latency[0] if p95_latency else 0
 
         # Queries by mode
-        by_mode = self.conn.execute("""
+        by_mode = self.conn.execute(
+            """
             SELECT rag_mode, COUNT(*) FROM query_metrics
             WHERE timestamp > ? GROUP BY rag_mode
-        """, (cutoff,)).fetchall()
+        """,
+            (cutoff,),
+        ).fetchall()
 
         # Queries by knowledge base
-        by_kb = self.conn.execute("""
+        by_kb = self.conn.execute(
+            """
             SELECT knowledge_base, COUNT(*) FROM query_metrics
             WHERE timestamp > ? AND knowledge_base IS NOT NULL
             GROUP BY knowledge_base
             ORDER BY COUNT(*) DESC
             LIMIT 5
-        """, (cutoff,)).fetchall()
+        """,
+            (cutoff,),
+        ).fetchall()
 
         # Average retrieval count
-        avg_retrieval = self.conn.execute(
-            "SELECT AVG(retrieval_count) FROM query_metrics WHERE timestamp > ?", (cutoff,)
-        ).fetchone()[0] or 0
+        avg_retrieval = self.conn.execute("SELECT AVG(retrieval_count) FROM query_metrics WHERE timestamp > ?", (cutoff,)).fetchone()[0] or 0
 
         return {
             "total_queries": total,
@@ -197,10 +198,10 @@ class MetricsTracker:
             "avg_retrieval_count": round(avg_retrieval, 2),
             "queries_by_mode": dict(by_mode),
             "queries_by_knowledge_base": dict(by_kb),
-            "period_days": days
+            "period_days": days,
         }
 
-    def get_recent_errors(self, limit: int = 10) -> List[Dict]:
+    def get_recent_errors(self, limit: int = 10) -> list[dict]:
         """
         Get recent query errors.
 
@@ -210,23 +211,28 @@ class MetricsTracker:
         Returns:
             List of error records.
         """
-        cursor = self.conn.execute("""
+        cursor = self.conn.execute(
+            """
             SELECT timestamp, query, error, rag_mode, knowledge_base
             FROM query_metrics
             WHERE success = FALSE
             ORDER BY timestamp DESC
             LIMIT ?
-        """, (limit,))
+        """,
+            (limit,),
+        )
 
         errors = []
         for row in cursor.fetchall():
-            errors.append({
-                "timestamp": row[0],
-                "query": row[1][:100] + "..." if len(row[1]) > 100 else row[1],
-                "error": row[2],
-                "rag_mode": row[3],
-                "knowledge_base": row[4]
-            })
+            errors.append(
+                {
+                    "timestamp": row[0],
+                    "query": row[1][:100] + "..." if len(row[1]) > 100 else row[1],
+                    "error": row[2],
+                    "rag_mode": row[3],
+                    "knowledge_base": row[4],
+                }
+            )
 
         return errors
 
@@ -284,11 +290,7 @@ class MetricsTracker:
             error_table.add_column("Error", style="error")
 
             for err in errors:
-                error_table.add_row(
-                    err["timestamp"][:19],
-                    err["query"][:30] + "...",
-                    err["error"][:40] if err["error"] else "Unknown"
-                )
+                error_table.add_row(err["timestamp"][:19], err["query"][:30] + "...", err["error"][:40] if err["error"] else "Unknown")
 
             console.print(error_table)
 
@@ -303,9 +305,7 @@ class MetricsTracker:
             Number of records deleted.
         """
         cutoff = (datetime.now() - timedelta(days=days)).isoformat()
-        cursor = self.conn.execute(
-            "DELETE FROM query_metrics WHERE timestamp < ?", (cutoff,)
-        )
+        cursor = self.conn.execute("DELETE FROM query_metrics WHERE timestamp < ?", (cutoff,))
         deleted = cursor.rowcount
         self.conn.commit()
         logger.info(f"Cleaned up {deleted} old metric entries")
@@ -321,7 +321,7 @@ class MetricsTracker:
 
 
 # Global metrics tracker instance
-_metrics_tracker: Optional[MetricsTracker] = None
+_metrics_tracker: MetricsTracker | None = None
 
 
 def get_metrics_tracker() -> MetricsTracker:

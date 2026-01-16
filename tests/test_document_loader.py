@@ -119,7 +119,7 @@ def test_clone_and_parse_repo(document_loader):
             f.write(TEST_FILE_CONTENT)
         return MagicMock(returncode=0)
 
-    with patch("subprocess.run", side_effect=mock_clone) as mock_run:
+    with patch("subprocess.run", side_effect=mock_clone):
         try:
             documents = document_loader._clone_and_parse_repo(TEST_REPO_URL)
             assert isinstance(documents, list)
@@ -210,7 +210,7 @@ def test_load_documents_from_repo(document_loader):
             f.write(TEST_FILE_CONTENT)
         return MagicMock(returncode=0)
 
-    with patch("subprocess.run", side_effect=mock_clone) as mock_run:
+    with patch("subprocess.run", side_effect=mock_clone):
         try:
             documents = document_loader.load_documents_from_repo(TEST_REPO_URL)
             assert isinstance(documents, list)

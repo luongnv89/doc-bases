@@ -15,13 +15,10 @@ import os
 import re
 import shutil
 import subprocess
-from typing import List, Optional
 
 import magic
 import requests
 from bs4 import BeautifulSoup
-from langchain_core.documents import Document
-from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.document_loaders import (
     PyPDFLoader,
     TextLoader,
@@ -29,16 +26,14 @@ from langchain_community.document_loaders import (
     UnstructuredPowerPointLoader,
     UnstructuredWordDocumentLoader,
 )
+from langchain_core.documents import Document
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 from rich.console import Console
 from tqdm import tqdm
 
-from src.utils.logger import custom_theme, get_logger  # Import custom_theme
 from src.utils.docling_loader import DoclingDocumentLoader, is_docling_available
-from src.utils.semantic_splitter import (
-    SemanticDocumentSplitter,
-    get_chunking_strategy,
-    is_semantic_chunker_available,
-)
+from src.utils.logger import custom_theme, get_logger  # Import custom_theme
+from src.utils.semantic_splitter import SemanticDocumentSplitter, get_chunking_strategy, is_semantic_chunker_available
 
 # Setup logging
 logger = get_logger()
@@ -94,7 +89,7 @@ class DocumentLoader:
         logger.debug(f"Extracted repo name: {repo_name} from URL: {repo_url}")
         return repo_name
 
-    def _clone_repo(self, repo_url: str, local_path: Optional[str] = None, overwrite: bool = True) -> bool:
+    def _clone_repo(self, repo_url: str, local_path: str | None = None, overwrite: bool = True) -> bool:
         """
         Clones a Git repository to a local path within the 'temps' directory.
 
@@ -138,7 +133,7 @@ class DocumentLoader:
             console.print(f"[error]An unexpected error occurred during cloning: {e}[/error]")
             return False
 
-    def _load_single_document(self, file_path: str) -> Optional[List[Document]]:
+    def _load_single_document(self, file_path: str) -> list[Document] | None:
         """
         Loads a single document of a supported type.
 
@@ -154,10 +149,7 @@ class DocumentLoader:
         # Try Docling first if enabled
         if _use_docling():
             try:
-                docling_loader = DoclingDocumentLoader(
-                    chunk_size=self.chunk_size,
-                    chunk_overlap=self.chunk_overlap
-                )
+                docling_loader = DoclingDocumentLoader(chunk_size=self.chunk_size, chunk_overlap=self.chunk_overlap)
                 if docling_loader.supports_format(file_path):
                     console.print("[info]Using Docling parser[/info]")
                     return docling_loader.load_document(file_path)
@@ -195,7 +187,7 @@ class DocumentLoader:
             console.print(f"[error]Error loading document {file_path}: {e}[/error]")
             return None
 
-    def _load_text_folder(self, folder_path: str) -> Optional[List[Document]]:
+    def _load_text_folder(self, folder_path: str) -> list[Document] | None:
         """
         Loads supported text files from a folder, including subfolders, to LangChain documents.
 
@@ -254,7 +246,7 @@ class DocumentLoader:
             console.print(f"[error]Error while loading text folder: {e}[/error]")
             return None
 
-    def _split_documents_to_chunk(self, documents: List[Document]) -> Optional[List[Document]]:
+    def _split_documents_to_chunk(self, documents: list[Document]) -> list[Document] | None:
         """
         Splits a list of documents into smaller chunks using configured strategy.
 
@@ -285,10 +277,7 @@ class DocumentLoader:
 
             # Default: recursive character splitting
             console.print("[info]Using recursive chunking strategy[/info]")
-            text_splitter = RecursiveCharacterTextSplitter(
-                chunk_size=self.chunk_size,
-                chunk_overlap=self.chunk_overlap
-            )
+            text_splitter = RecursiveCharacterTextSplitter(chunk_size=self.chunk_size, chunk_overlap=self.chunk_overlap)
             split_documents = text_splitter.split_documents(documents)
             console.print(f"[success]Successfully split documents into {len(split_documents)} chunks.[/success]")
             return split_documents
@@ -296,7 +285,7 @@ class DocumentLoader:
             console.print(f"[error]Error splitting documents: {e}[/error]")
             return None
 
-    def _load_text_folder_to_chunk(self, folder_path: str) -> Optional[List[Document]]:
+    def _load_text_folder_to_chunk(self, folder_path: str) -> list[Document] | None:
         """
         Combines loading and chunking processes for text files in a folder.
 
@@ -325,7 +314,7 @@ class DocumentLoader:
             console.print(f"[error]Error in load_text_folder_to_chunk: {e}[/error]")
             return None
 
-    def _clone_and_parse_repo(self, repo_url: str, overwrite: bool = False) -> Optional[List[Document]]:
+    def _clone_and_parse_repo(self, repo_url: str, overwrite: bool = False) -> list[Document] | None:
         """
         Clones a GitHub repository, processes its files, and splits the text into chunks.
 
@@ -410,7 +399,7 @@ class DocumentLoader:
             console.print(f"[error]An unexpected error occurred during downloading: {e}[/error]")
             return False
 
-    def _scrape_website(self, url: str) -> Optional[Document]:
+    def _scrape_website(self, url: str) -> Document | None:
         """
         Scrapes the content of a webpage and returns it as a Langchain Document.
 
@@ -437,7 +426,7 @@ class DocumentLoader:
             console.print(f"[error]An unexpected error occurred during scraping: {e}[/error]")
             return None
 
-    def load_documents_from_url(self, file_url: str, overwrite: bool = False) -> Optional[List[Document]]:
+    def load_documents_from_url(self, file_url: str, overwrite: bool = False) -> list[Document] | None:
         """
         Downloads a file from a URL and returns chunked documents.
 
@@ -463,7 +452,7 @@ class DocumentLoader:
             if os.path.exists(local_path):
                 os.remove(local_path)
 
-    def load_documents_from_directory(self, folder_path: str) -> Optional[List[Document]]:
+    def load_documents_from_directory(self, folder_path: str) -> list[Document] | None:
         """
         Loads documents from a directory and returns chunked documents.
 
@@ -480,7 +469,7 @@ class DocumentLoader:
             console.print(f"[error]An error occurred during loading or processing documents: {e}[/error]")
             return None
 
-    def load_documents_from_file(self, file_path: str) -> Optional[List[Document]]:
+    def load_documents_from_file(self, file_path: str) -> list[Document] | None:
         """
         Loads documents from a single file and returns chunked documents.
 
@@ -501,7 +490,7 @@ class DocumentLoader:
             console.print(f"[error]An error occurred during loading or processing document: {e}[/error]")
             return None
 
-    def load_documents_from_repo(self, repo_url: str, overwrite: bool = False) -> Optional[List[Document]]:
+    def load_documents_from_repo(self, repo_url: str, overwrite: bool = False) -> list[Document] | None:
         """
         Clones a repository from a URL and returns chunked documents.
 
@@ -519,7 +508,7 @@ class DocumentLoader:
             console.print(f"[error]An error occurred during loading or processing the repo: {e}[/error]")
             return None
 
-    def load_documents_from_website(self, url: str) -> Optional[List[Document]]:
+    def load_documents_from_website(self, url: str) -> list[Document] | None:
         """
         Scrapes content from a website and returns chunked documents.
 

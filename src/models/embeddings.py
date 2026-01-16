@@ -3,7 +3,6 @@ This module provides functions for getting embedding models.
 """
 
 import os
-from typing import Optional
 
 from dotenv import load_dotenv
 from langchain_core.embeddings import Embeddings
@@ -23,10 +22,10 @@ console = Console(theme=custom_theme)
 
 
 def get_embedding_model(
-    provider: Optional[str] = None,
-    model: Optional[str] = None,
-    api_key: Optional[str] = None,
-    api_base: Optional[str] = None,
+    provider: str | None = None,
+    model: str | None = None,
+    api_key: str | None = None,
+    api_base: str | None = None,
 ) -> Embeddings:
     """
     Gets the embedding model based on the provided provider and model name.

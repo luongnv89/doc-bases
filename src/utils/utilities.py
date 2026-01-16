@@ -1,7 +1,6 @@
 import os
 import re
 import subprocess
-from typing import List, Tuple
 
 from src.utils.logger import get_logger
 
@@ -87,7 +86,7 @@ def normalize_file_path(path: str) -> str:
     return path
 
 
-def validate_file_paths(query: str) -> Tuple[bool, List[str]]:
+def validate_file_paths(query: str) -> tuple[bool, list[str]]:
     """
     Detects file paths in a query and validates them for image files.
 
@@ -167,7 +166,7 @@ def is_image_file(file_path: str) -> bool:
     return ext in image_extensions
 
 
-def format_image_error_message(invalid_files: List[str]) -> str:
+def format_image_error_message(invalid_files: list[str]) -> str:
     """
     Formats an error message for detected image files.
 

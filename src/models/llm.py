@@ -3,7 +3,6 @@ This module provides functions for getting LLM models.
 """
 
 import os
-from typing import Optional
 
 from dotenv import load_dotenv
 from langchain_core.language_models.chat_models import BaseChatModel
@@ -24,10 +23,10 @@ console = Console(theme=custom_theme)
 
 
 def get_llm_model(
-    provider: Optional[str] = None,
-    model: Optional[str] = None,
-    api_key: Optional[str] = None,
-    api_base: Optional[str] = None,
+    provider: str | None = None,
+    model: str | None = None,
+    api_key: str | None = None,
+    api_base: str | None = None,
 ) -> BaseChatModel:
     """Gets the LLM model based on the provided provider and model name.
 

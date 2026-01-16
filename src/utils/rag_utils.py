@@ -25,10 +25,9 @@ import os
 import shutil
 import time
 import uuid
-from typing import List, Optional
 
-from langchain_core.documents import Document
 from langchain_chroma import Chroma
+from langchain_core.documents import Document
 from langchain_core.tools import tool
 from langgraph.prebuilt import create_react_agent
 from rich.console import Console
@@ -38,22 +37,21 @@ from rich.panel import Panel
 from rich.spinner import Spinner
 from tqdm import tqdm
 
-from src.models.embeddings import get_embedding_model
-from src.models.llm import get_llm_model
-from src.utils.logger import custom_theme, get_logger  # Import custom_theme
-from src.utils.utilities import validate_file_paths, format_image_error_message
-
-# Phase 3: Advanced RAG patterns
-from src.graphs.corrective_rag import CorrectiveRAGGraph
-from src.graphs.adaptive_rag import AdaptiveRAGGraph
-
 # Phase 4: Multi-agent orchestration
 from src.agents.supervisor import MultiAgentSupervisor
 
 # Phase 5: Persistent memory and observability
 from src.checkpointing.sqlite_saver import get_checkpointer
+from src.graphs.adaptive_rag import AdaptiveRAGGraph
+
+# Phase 3: Advanced RAG patterns
+from src.graphs.corrective_rag import CorrectiveRAGGraph
+from src.models.embeddings import get_embedding_model
+from src.models.llm import get_llm_model
 from src.observability.langsmith_tracer import setup_langsmith_tracing
 from src.observability.metrics import get_metrics_tracker
+from src.utils.logger import custom_theme, get_logger  # Import custom_theme
+from src.utils.utilities import format_image_error_message, validate_file_paths
 
 # Setup logging
 logger = get_logger()
@@ -83,7 +81,7 @@ def get_retriever_tool(vectorstore):
     return retrieve_context
 
 
-def setup_rag(documents: List[Document], knowledge_base_name: str, llm=None):
+def setup_rag(documents: list[Document], knowledge_base_name: str, llm=None):
     """
     Setup RAG with selected mode.
 
@@ -138,7 +136,7 @@ def setup_rag(documents: List[Document], knowledge_base_name: str, llm=None):
     return agent
 
 
-def list_knowledge_bases() -> List[str]:
+def list_knowledge_bases() -> list[str]:
     """Lists all available knowledge bases.
 
     Returns:
@@ -336,7 +334,7 @@ def interactive_cli() -> None:
             knowledge_base=knowledge_base_name,
             session_id=session_id,
             success=success,
-            error=error_msg
+            error=error_msg,
         )
 
         messages.append({"role": "assistant", "content": answer})

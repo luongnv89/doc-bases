@@ -2,9 +2,9 @@
 Web search tool for fallback retrieval in Corrective RAG.
 Uses DuckDuckGo (free, no API key required).
 """
-from typing import List
-from langchain_core.tools import tool
+
 from langchain_core.documents import Document
+from langchain_core.tools import tool
 
 from src.utils.logger import get_logger
 
@@ -13,6 +13,7 @@ logger = get_logger()
 # Try to import DuckDuckGo search
 try:
     from langchain_community.tools import DuckDuckGoSearchResults
+
     DUCKDUCKGO_AVAILABLE = True
 except ImportError:
     DUCKDUCKGO_AVAILABLE = False
@@ -43,7 +44,7 @@ def web_search(query: str, max_results: int = 3) -> str:
         return f"Web search error: {e}"
 
 
-def web_search_to_documents(query: str, max_results: int = 3) -> List[Document]:
+def web_search_to_documents(query: str, max_results: int = 3) -> list[Document]:
     """
     Perform web search and return results as LangChain Documents.
 
@@ -61,19 +62,12 @@ def web_search_to_documents(query: str, max_results: int = 3) -> List[Document]:
             for result in results:
                 doc = Document(
                     page_content=result.get("snippet", str(result)),
-                    metadata={
-                        "source": result.get("link", "web_search"),
-                        "title": result.get("title", ""),
-                        "content_type": "web_search"
-                    }
+                    metadata={"source": result.get("link", "web_search"), "title": result.get("title", ""), "content_type": "web_search"},
                 )
                 documents.append(doc)
         else:
             # Handle string results
-            documents.append(Document(
-                page_content=str(results),
-                metadata={"source": "web_search", "content_type": "web_search"}
-            ))
+            documents.append(Document(page_content=str(results), metadata={"source": "web_search", "content_type": "web_search"}))
 
         return documents
     except Exception as e:

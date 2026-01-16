@@ -3,7 +3,6 @@ import os
 from unittest.mock import patch
 
 import pytest
-from langchain_core.language_models.chat_models import BaseChatModel
 
 from src.models.llm import get_llm_model
 

@@ -1,9 +1,10 @@
 """
 Tests for Phase 3: Adaptive RAG implementation.
 """
-import os
+
+from unittest.mock import AsyncMock, MagicMock
+
 import pytest
-from unittest.mock import patch, MagicMock, AsyncMock
 from langchain_core.documents import Document
 
 from src.graphs.adaptive_rag import AdaptiveRAGGraph, AdaptiveRAGState
@@ -14,13 +15,7 @@ class TestAdaptiveRAGState:
 
     def test_state_structure(self):
         """AdaptiveRAGState should have correct structure."""
-        state: AdaptiveRAGState = {
-            "messages": [],
-            "question": "test question",
-            "query_type": None,
-            "documents": [],
-            "generation": ""
-        }
+        state: AdaptiveRAGState = {"messages": [], "question": "test question", "query_type": None, "documents": [], "generation": ""}
         assert "question" in state
         assert "query_type" in state
         assert "documents" in state
@@ -28,13 +23,7 @@ class TestAdaptiveRAGState:
 
     def test_state_with_query_type(self):
         """State should accept valid query types."""
-        state: AdaptiveRAGState = {
-            "messages": [],
-            "question": "test",
-            "query_type": "simple",
-            "documents": [],
-            "generation": ""
-        }
+        state: AdaptiveRAGState = {"messages": [], "question": "test", "query_type": "simple", "documents": [], "generation": ""}
         assert state["query_type"] == "simple"
 
 
@@ -46,10 +35,7 @@ class TestAdaptiveRAGGraph:
         mock_vectorstore = MagicMock()
         mock_llm = MagicMock()
 
-        graph = AdaptiveRAGGraph(
-            vectorstore=mock_vectorstore,
-            llm=mock_llm
-        )
+        graph = AdaptiveRAGGraph(vectorstore=mock_vectorstore, llm=mock_llm)
 
         assert graph.vectorstore == mock_vectorstore
         assert graph.llm == mock_llm
@@ -62,13 +48,7 @@ class TestAdaptiveRAGGraph:
 
         graph = AdaptiveRAGGraph(mock_vectorstore, mock_llm)
 
-        state: AdaptiveRAGState = {
-            "messages": [],
-            "question": "What is Python?",
-            "query_type": "simple",
-            "documents": [],
-            "generation": ""
-        }
+        state: AdaptiveRAGState = {"messages": [], "question": "What is Python?", "query_type": "simple", "documents": [], "generation": ""}
 
         result = graph.route_query(state)
         assert result == "simple"
@@ -85,7 +65,7 @@ class TestAdaptiveRAGGraph:
             "question": "Compare and contrast X and Y",
             "query_type": "complex",
             "documents": [],
-            "generation": ""
+            "generation": "",
         }
 
         result = graph.route_query(state)
@@ -98,13 +78,7 @@ class TestAdaptiveRAGGraph:
 
         graph = AdaptiveRAGGraph(mock_vectorstore, mock_llm)
 
-        state: AdaptiveRAGState = {
-            "messages": [],
-            "question": "What's the latest news?",
-            "query_type": "web",
-            "documents": [],
-            "generation": ""
-        }
+        state: AdaptiveRAGState = {"messages": [], "question": "What's the latest news?", "query_type": "web", "documents": [], "generation": ""}
 
         result = graph.route_query(state)
         assert result == "web"
@@ -114,23 +88,14 @@ class TestAdaptiveRAGGraph:
         """simple_retrieval should retrieve documents."""
         mock_vectorstore = MagicMock()
         mock_retriever = MagicMock()
-        mock_retriever.ainvoke = AsyncMock(return_value=[
-            Document(page_content="Test doc 1"),
-            Document(page_content="Test doc 2")
-        ])
+        mock_retriever.ainvoke = AsyncMock(return_value=[Document(page_content="Test doc 1"), Document(page_content="Test doc 2")])
         mock_vectorstore.as_retriever.return_value = mock_retriever
 
         mock_llm = MagicMock()
 
         graph = AdaptiveRAGGraph(mock_vectorstore, mock_llm)
 
-        state: AdaptiveRAGState = {
-            "messages": [],
-            "question": "Test question",
-            "query_type": "simple",
-            "documents": [],
-            "generation": ""
-        }
+        state: AdaptiveRAGState = {"messages": [], "question": "Test question", "query_type": "simple", "documents": [], "generation": ""}
 
         result = await graph.simple_retrieval(state)
         assert len(result["documents"]) == 2
@@ -152,7 +117,7 @@ class TestAdaptiveRAGGraph:
             "question": "Test question",
             "query_type": "simple",
             "documents": [Document(page_content="Relevant context")],
-            "generation": ""
+            "generation": "",
         }
 
         result = await graph.generate(state)
@@ -177,17 +142,10 @@ class TestAdaptiveRAGQueryClassification:
         graph = AdaptiveRAGGraph(mock_vectorstore, mock_llm)
 
         # Override the chain behavior for testing
-        original_prompt = graph.classification_prompt
         graph.classification_prompt = MagicMock()
         graph.classification_prompt.__or__ = MagicMock(return_value=mock_llm)
 
-        state: AdaptiveRAGState = {
-            "messages": [],
-            "question": "What is Python?",
-            "query_type": None,
-            "documents": [],
-            "generation": ""
-        }
+        state: AdaptiveRAGState = {"messages": [], "question": "What is Python?", "query_type": None, "documents": [], "generation": ""}
 
         result = await graph.classify_query(state)
         assert result["query_type"] == "simple"
@@ -207,13 +165,7 @@ class TestAdaptiveRAGQueryClassification:
         graph.classification_prompt = MagicMock()
         graph.classification_prompt.__or__ = MagicMock(return_value=mock_llm)
 
-        state: AdaptiveRAGState = {
-            "messages": [],
-            "question": "Some query",
-            "query_type": None,
-            "documents": [],
-            "generation": ""
-        }
+        state: AdaptiveRAGState = {"messages": [], "question": "Some query", "query_type": None, "documents": [], "generation": ""}
 
         result = await graph.classify_query(state)
         assert result["query_type"] == "simple"

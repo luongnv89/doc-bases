@@ -7,19 +7,15 @@ LangSmith provides:
 - Debug logging for prompt/response pairs
 - Cost tracking for API calls
 """
+
 import os
-from typing import Optional
 
 from src.utils.logger import get_logger
 
 logger = get_logger()
 
 
-def setup_langsmith_tracing(
-    api_key: Optional[str] = None,
-    project: Optional[str] = None,
-    enabled: Optional[bool] = None
-) -> bool:
+def setup_langsmith_tracing(api_key: str | None = None, project: str | None = None, enabled: bool | None = None) -> bool:
     """
     Configure LangSmith tracing for the application.
 

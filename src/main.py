@@ -6,11 +6,11 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
+from src.observability.metrics import get_metrics_tracker
 from src.utils.document_loader import DocumentLoader
 from src.utils.logger import custom_theme, setup_logger, toggle_logs
 from src.utils.rag_utils import delete_knowledge_base, interactive_cli, list_knowledge_bases, setup_rag
 from src.utils.utilities import generate_knowledge_base_name, get_version_from_git, normalize_file_path
-from src.observability.metrics import get_metrics_tracker
 
 # Load environment variables from .env file
 load_dotenv()
