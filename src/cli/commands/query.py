@@ -139,7 +139,7 @@ def single(
             input_data = {"messages": [{"role": "user", "content": query}]}
 
         # Invoke agent
-        if inspect.iscoroutinefunction(agent.invoke):
+        if inspect.iscoroutinefunction(agent.invoke):  # noqa: SIM108
             result = asyncio.run(agent.invoke(input_data, config))
         else:
             result = agent.invoke(input_data, config)
@@ -256,7 +256,7 @@ def batch(
                 input_data = {"messages": [{"role": "user", "content": query_text}]}
 
             # Invoke agent
-            if inspect.iscoroutinefunction(agent.invoke):
+            if inspect.iscoroutinefunction(agent.invoke):  # noqa: SIM108
                 result = asyncio.run(agent.invoke(input_data, config))
             else:
                 result = agent.invoke(input_data, config)
