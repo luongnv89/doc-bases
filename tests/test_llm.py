@@ -115,5 +115,6 @@ def test_get_llm_model_missing_api_key(mock_env_vars):
 
 def test_get_llm_model_unsupported_provider():
     """Test get_llm_model with an unsupported provider."""
-    with pytest.raises(ValueError, match="Provider 'unsupported_provider' not supported and no API key provided"):
-        get_llm_model(provider="unsupported_provider")
+    with patch.dict(os.environ, {"LLM_MODEL": "test-model"}, clear=False):
+        with pytest.raises(ValueError, match="Provider 'unsupported_provider' not supported and no API key provided"):
+            get_llm_model(provider="unsupported_provider")

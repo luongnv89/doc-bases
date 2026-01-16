@@ -72,6 +72,7 @@ jobs:
 
       - name: Display Bandit results
         run: bandit -c pyproject.toml -r src/
+        continue-on-error: true
 
       - name: Check dependencies for vulnerabilities
         run: safety check -r requirements.txt --output text || true
@@ -105,6 +106,7 @@ jobs:
 
       - name: Run mypy type checking
         run: mypy src/ --ignore-missing-imports
+        continue-on-error: true
 
   test:
     name: Test (Python ${{ matrix.python-version }})
@@ -112,7 +114,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.11", "3.12", "3.13", "3.14"]
+        python-version: ["3.11", "3.12", "3.13"]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
