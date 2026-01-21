@@ -37,10 +37,9 @@ def cleanup_test_docs(test_docs_dir: Path):
         shutil.rmtree(test_docs_dir)
 
 
-def mock_setup_rag(*args, **kwargs):
-    """Mock setup_rag to avoid expensive embedding operations."""
-    kb_name = args[1] if len(args) > 1 else kwargs.get("knowledge_base_name", TEST_KB_NAME)
-    # Create the KB directory structure as setup_rag would
+def mock_create_vector_store(docs, kb_name):
+    """Mock create_vector_store to avoid expensive embedding operations."""
+    # Create the KB directory structure as create_vector_store would
     kb_path = KNOWLEDGES_DIR / kb_name
     kb_path.mkdir(parents=True, exist_ok=True)
     (kb_path / "vector_store").mkdir(exist_ok=True)
@@ -64,8 +63,8 @@ class TestKBMetadataE2E:
         cleanup_test_kb()
         cleanup_test_docs(self.test_docs_dir)
 
-    @patch("src.cli.commands.kb.setup_rag", side_effect=mock_setup_rag)
-    def test_kb_creation_saves_metadata(self, mock_rag):
+    @patch("src.cli.commands.kb.create_vector_store", side_effect=mock_create_vector_store)
+    def test_kb_creation_saves_metadata(self, mock_vector_store):
         """Test that creating a KB saves metadata.json with file info."""
         # Create test documents
         (self.test_docs_dir / "readme.md").write_text("# Test Documentation\n\nThis is a test.")
@@ -99,8 +98,8 @@ class TestKBMetadataE2E:
         assert "readme.md" in file_paths
         assert "guide.txt" in file_paths
 
-    @patch("src.cli.commands.kb.setup_rag", side_effect=mock_setup_rag)
-    def test_kb_info_shows_metadata(self, mock_rag):
+    @patch("src.cli.commands.kb.create_vector_store", side_effect=mock_create_vector_store)
+    def test_kb_info_shows_metadata(self, mock_vector_store):
         """Test that kb info command displays metadata."""
         # Create test document
         (self.test_docs_dir / "doc.md").write_text("# Document")
@@ -121,8 +120,8 @@ class TestKBMetadataE2E:
         assert "Last Sync" in result.output
         assert "Indexed Files" in result.output
 
-    @patch("src.cli.commands.kb.setup_rag", side_effect=mock_setup_rag)
-    def test_detect_no_changes(self, mock_rag):
+    @patch("src.cli.commands.kb.create_vector_store", side_effect=mock_create_vector_store)
+    def test_detect_no_changes(self, mock_vector_store):
         """Test that no changes are detected when files haven't changed."""
         # Create test document
         (self.test_docs_dir / "stable.md").write_text("# Stable Content")
@@ -141,8 +140,8 @@ class TestKBMetadataE2E:
         assert len(report.modified_files) == 0
         assert len(report.deleted_files) == 0
 
-    @patch("src.cli.commands.kb.setup_rag", side_effect=mock_setup_rag)
-    def test_detect_added_file(self, mock_rag):
+    @patch("src.cli.commands.kb.create_vector_store", side_effect=mock_create_vector_store)
+    def test_detect_added_file(self, mock_vector_store):
         """Test detection of newly added files."""
         # Create initial document
         (self.test_docs_dir / "original.md").write_text("# Original")
@@ -164,8 +163,8 @@ class TestKBMetadataE2E:
         assert len(report.modified_files) == 0
         assert len(report.deleted_files) == 0
 
-    @patch("src.cli.commands.kb.setup_rag", side_effect=mock_setup_rag)
-    def test_detect_modified_file(self, mock_rag):
+    @patch("src.cli.commands.kb.create_vector_store", side_effect=mock_create_vector_store)
+    def test_detect_modified_file(self, mock_vector_store):
         """Test detection of modified files."""
         # Create initial document
         test_file = self.test_docs_dir / "modifiable.md"
@@ -191,8 +190,8 @@ class TestKBMetadataE2E:
         assert len(report.added_files) == 0
         assert len(report.deleted_files) == 0
 
-    @patch("src.cli.commands.kb.setup_rag", side_effect=mock_setup_rag)
-    def test_detect_deleted_file(self, mock_rag):
+    @patch("src.cli.commands.kb.create_vector_store", side_effect=mock_create_vector_store)
+    def test_detect_deleted_file(self, mock_vector_store):
         """Test detection of deleted files."""
         # Create initial documents
         (self.test_docs_dir / "keep.md").write_text("# Keep this")
@@ -215,8 +214,8 @@ class TestKBMetadataE2E:
         assert len(report.added_files) == 0
         assert len(report.modified_files) == 0
 
-    @patch("src.cli.commands.kb.setup_rag", side_effect=mock_setup_rag)
-    def test_detect_multiple_changes(self, mock_rag):
+    @patch("src.cli.commands.kb.create_vector_store", side_effect=mock_create_vector_store)
+    def test_detect_multiple_changes(self, mock_vector_store):
         """Test detection of multiple types of changes simultaneously."""
         # Create initial documents
         (self.test_docs_dir / "unchanged.md").write_text("# Unchanged")
@@ -245,8 +244,8 @@ class TestKBMetadataE2E:
         assert "to_modify.md" in report.modified_files
         assert "to_delete.md" in report.deleted_files
 
-    @patch("src.cli.commands.kb.setup_rag", side_effect=mock_setup_rag)
-    def test_nested_directory_tracking(self, mock_rag):
+    @patch("src.cli.commands.kb.create_vector_store", side_effect=mock_create_vector_store)
+    def test_nested_directory_tracking(self, mock_vector_store):
         """Test that files in nested directories are tracked."""
         # Create nested structure
         subdir = self.test_docs_dir / "subdir"
@@ -293,8 +292,8 @@ class TestKBMetadataE2E:
         assert not report.has_changes
         assert report.error == "no_metadata"
 
-    @patch("src.cli.commands.kb.setup_rag", side_effect=mock_setup_rag)
-    def test_source_path_not_found(self, mock_rag):
+    @patch("src.cli.commands.kb.create_vector_store", side_effect=mock_create_vector_store)
+    def test_source_path_not_found(self, mock_vector_store):
         """Test behavior when source path no longer exists."""
         # Create test document
         (self.test_docs_dir / "temp.md").write_text("# Temporary")
@@ -314,8 +313,8 @@ class TestKBMetadataE2E:
         assert report.has_changes
         assert report.error == "source_not_found"
 
-    @patch("src.cli.commands.kb.setup_rag", side_effect=mock_setup_rag)
-    def test_single_file_kb(self, mock_rag):
+    @patch("src.cli.commands.kb.create_vector_store", side_effect=mock_create_vector_store)
+    def test_single_file_kb(self, mock_vector_store):
         """Test KB created from a single file."""
         # Create single test file
         test_file = self.test_docs_dir / "single_doc.md"
@@ -347,8 +346,8 @@ class TestKBMetadataE2E:
         assert report.has_changes
         assert "single_doc.md" in report.modified_files
 
-    @patch("src.cli.commands.kb.setup_rag", side_effect=mock_setup_rag)
-    def test_kb_overwrite_updates_metadata(self, mock_rag):
+    @patch("src.cli.commands.kb.create_vector_store", side_effect=mock_create_vector_store)
+    def test_kb_overwrite_updates_metadata(self, mock_vector_store):
         """Test that overwriting a KB updates the metadata."""
         # Create initial document
         (self.test_docs_dir / "v1.md").write_text("# Version 1")
