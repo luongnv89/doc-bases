@@ -154,7 +154,7 @@ def _run_legacy_cli():
             return
 
         if docs:
-            kb_name = generate_knowledge_base_name(input_str)
+            kb_name = generate_knowledge_base_name(source_choice, input_str)
             logger.info(f"Generated knowledge base name: {kb_name}")
             existing_kbs = list_knowledge_bases()
             if kb_name in existing_kbs:

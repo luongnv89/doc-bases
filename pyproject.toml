@@ -13,6 +13,10 @@ license = {text = "MIT"}
 [project.scripts]
 docb = "src.cli.main:app"
 
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["src*"]
+
 [tool.black]
 line-length = 150
 target-version = ['py311', 'py312', 'py313']
@@ -67,11 +71,14 @@ ignore = [
     "E501",   # line too long (handled by black)
     "B008",   # do not perform function calls in argument defaults
     "B904",   # raise without from inside except
+    "SIM108", # ternary operator - keep if/else for readability in complex cases
     "SIM117", # nested with statements - keep for clarity
 ]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["S101"]  # Allow assert in tests
+"docb" = ["E402"]     # Allow import after path setup
+"run.py" = ["E402"]   # Allow import after path setup
 
 [tool.mypy]
 python_version = "3.11"

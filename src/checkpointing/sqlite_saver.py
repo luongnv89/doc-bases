@@ -11,6 +11,7 @@ from datetime import datetime, timedelta
 
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.checkpoint.sqlite import SqliteSaver
+from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
 from rich.console import Console
 
 from src.utils.logger import custom_theme, get_logger
@@ -183,7 +184,7 @@ class PersistentCheckpointer:
 
 def get_checkpointer(use_persistent: bool = None):
     """
-    Get appropriate checkpointer based on configuration.
+    Get appropriate checkpointer based on configuration (sync version).
 
     Args:
         use_persistent: Override for persistent memory setting.
@@ -205,4 +206,62 @@ def get_checkpointer(use_persistent: bool = None):
             return MemorySaver()
     else:
         logger.info("Using in-memory checkpointer")
+        return MemorySaver()
+
+
+def get_async_checkpointer(use_persistent: bool = None) -> AsyncSqliteSaver | MemorySaver:
+    """
+    Get appropriate async checkpointer based on configuration.
+
+    Use this for async agents (corrective, adaptive, multi_agent modes).
+    IMPORTANT: Call this after setting the event loop with asyncio.set_event_loop()
+    to ensure the aiosqlite connection uses the correct loop.
+
+    Args:
+        use_persistent: Override for persistent memory setting.
+                       If None, reads from USE_PERSISTENT_MEMORY env var.
+
+    Returns:
+        AsyncSqliteSaver for persistent memory, or MemorySaver for in-memory.
+    """
+    import asyncio
+
+    import aiosqlite
+
+    if use_persistent is None:
+        use_persistent = os.getenv("USE_PERSISTENT_MEMORY", "true").lower() == "true"
+
+    if use_persistent:
+        try:
+            db_path = os.getenv("CHECKPOINT_DB_PATH", "knowledges/checkpoints.db")
+            # Ensure directory exists
+            db_dir = os.path.dirname(db_path)
+            if db_dir:
+                os.makedirs(db_dir, exist_ok=True)
+
+            # Create AsyncSqliteSaver with proper async connection
+            async def create_async_saver():
+                conn = await aiosqlite.connect(db_path)
+                await conn.execute("PRAGMA journal_mode=WAL")
+                return AsyncSqliteSaver(conn)
+
+            # Use the current event loop if available, otherwise create a new one
+            try:
+                loop = asyncio.get_event_loop()
+                if loop.is_closed():
+                    raise RuntimeError("Event loop is closed")
+                saver = loop.run_until_complete(create_async_saver())
+            except RuntimeError:
+                # No event loop or loop is closed - create new one
+                saver = asyncio.run(create_async_saver())
+
+            logger.info(f"AsyncSqliteSaver initialized at {db_path}")
+            console.print(f"[info]Persistent memory enabled (async): {db_path}[/info]")
+            return saver
+        except Exception as e:
+            logger.warning(f"Async SQLite checkpointer failed, falling back to memory: {e}")
+            console.print(f"[warning]Persistent memory unavailable, using in-memory: {e}[/warning]")
+            return MemorySaver()
+    else:
+        logger.info("Using in-memory checkpointer (async)")
         return MemorySaver()

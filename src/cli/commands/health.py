@@ -110,6 +110,10 @@ def health_check(
     # Check dependencies
     if deps:
         print_info("Checking dependencies...")
+        # Map package names to their import names (when different)
+        package_import_map = {
+            "pyyaml": "yaml",
+        }
         required_packages = [
             "typer",
             "pyyaml",
@@ -123,7 +127,8 @@ def health_check(
         missing = []
         for package in required_packages:
             try:
-                __import__(package.replace("-", "_"))
+                import_name = package_import_map.get(package, package.replace("-", "_"))
+                __import__(import_name)
                 print_success(f"{package}")
             except ImportError:
                 print_warning(f"{package} (missing)")

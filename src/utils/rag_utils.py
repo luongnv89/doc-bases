@@ -25,6 +25,7 @@ import os
 import shutil
 import time
 import uuid
+from typing import Any
 
 from langchain_chroma import Chroma
 from langchain_core.documents import Document
@@ -41,7 +42,7 @@ from tqdm import tqdm
 from src.agents.supervisor import MultiAgentSupervisor
 
 # Phase 5: Persistent memory and observability
-from src.checkpointing.sqlite_saver import get_checkpointer
+from src.checkpointing.sqlite_saver import get_async_checkpointer, get_checkpointer
 from src.graphs.adaptive_rag import AdaptiveRAGGraph
 
 # Phase 3: Advanced RAG patterns
@@ -111,9 +112,15 @@ def setup_rag(documents: list[Document], knowledge_base_name: str, llm=None):
     if not llm:
         llm = get_llm_model()
 
-    memory = get_checkpointer()
     rag_mode = get_rag_mode()
 
+    # Use async checkpointer for async agents, sync for basic mode
+    if rag_mode in ["corrective", "adaptive", "multi_agent"]:
+        memory = get_async_checkpointer()
+    else:
+        memory = get_checkpointer()
+
+    agent: Any
     if rag_mode == "corrective":
         logger.info("Setting up Corrective RAG mode")
         console.print("[info]RAG Mode: Corrective[/info]")
@@ -195,9 +202,15 @@ def load_rag_chain(knowledge_base_name: str, llm=None):
     if not llm:
         llm = get_llm_model()
 
-    memory = get_checkpointer()
     rag_mode = get_rag_mode()
 
+    # Use async checkpointer for async agents, sync for basic mode
+    if rag_mode in ["corrective", "adaptive", "multi_agent"]:
+        memory = get_async_checkpointer()
+    else:
+        memory = get_checkpointer()
+
+    agent: Any
     if rag_mode == "corrective":
         logger.info("Loading Corrective RAG mode")
         console.print("[info]RAG Mode: Corrective[/info]")
@@ -220,129 +233,159 @@ def load_rag_chain(knowledge_base_name: str, llm=None):
     return agent
 
 
-def interactive_cli() -> None:
+def interactive_cli(knowledge_base_name: str | None = None, session_id: str | None = None) -> None:
     """
     Interactive CLI with support for multiple RAG modes.
 
     Handles both sync (basic) and async (corrective, adaptive) agents.
     Includes metrics tracking for query performance monitoring.
+
+    Args:
+        knowledge_base_name: Optional KB name. If provided, skips KB selection.
+        session_id: Optional session ID. If provided, skips session ID prompt.
     """
     logger.info("Starting interactive CLI.")
 
     # Initialize metrics tracker
     metrics = get_metrics_tracker()
-    knowledge_bases = list_knowledge_bases()
-    if not knowledge_bases:
-        console.print("[error]No knowledge bases available. Please set up a RAG system first.[/error]")
-        logger.warning("No knowledge bases available for interactive CLI.")
-        return
-    if len(knowledge_bases) == 1:
-        knowledge_base_name = knowledge_bases[0]
-        logger.info(f"Only one knowledge base found, using: {knowledge_base_name}")
-    else:
-        console.print("[header]Available Knowledge Bases:[/header]")
-        for i, kb in enumerate(knowledge_bases, 1):
-            console.print(f"{i}. {kb}")
-        try:
-            selected = int(input("Select a knowledge base by number: ").strip())
-            if selected < 1 or selected > len(knowledge_bases):
-                console.print("[error]Invalid selection.[/error]")
-                logger.warning(f"Invalid knowledge base selection: {selected}")
-                return
-            logger.info(f"User selected knowledge base: {knowledge_bases[selected - 1]}")
-        except ValueError:
-            console.print("[error]Invalid input. Please enter a number.[/error]")
-            logger.error("Invalid input for knowledge base selection.")
+
+    # Select knowledge base if not provided
+    if not knowledge_base_name:
+        knowledge_bases = list_knowledge_bases()
+        if not knowledge_bases:
+            console.print("[error]No knowledge bases available. Please set up a RAG system first.[/error]")
+            logger.warning("No knowledge bases available for interactive CLI.")
             return
-        knowledge_base_name = knowledge_bases[selected - 1]
-    llm = get_llm_model()
-    if not llm:
-        logger.error("Failed to load LLM model for interactive CLI.")
-        return
-    agent = load_rag_chain(knowledge_base_name, llm=llm)
-    if not agent:
-        logger.error("Failed to load Agentic RAG for interactive CLI.")
-        return
+        if len(knowledge_bases) == 1:
+            knowledge_base_name = knowledge_bases[0]
+            logger.info(f"Only one knowledge base found, using: {knowledge_base_name}")
+        else:
+            console.print("[header]Available Knowledge Bases:[/header]")
+            for i, kb in enumerate(knowledge_bases, 1):
+                console.print(f"{i}. {kb}")
+            try:
+                selected = int(input("Select a knowledge base by number: ").strip())
+                if selected < 1 or selected > len(knowledge_bases):
+                    console.print("[error]Invalid selection.[/error]")
+                    logger.warning(f"Invalid knowledge base selection: {selected}")
+                    return
+                logger.info(f"User selected knowledge base: {knowledge_bases[selected - 1]}")
+            except ValueError:
+                console.print("[error]Invalid input. Please enter a number.[/error]")
+                logger.error("Invalid input for knowledge base selection.")
+                return
+            knowledge_base_name = knowledge_bases[selected - 1]
 
     # Get RAG mode for handling async vs sync
     rag_mode = get_rag_mode()
     is_async_agent = rag_mode in ["corrective", "adaptive", "multi_agent"]
 
-    # Ask for or generate a session/thread id for conversation memory
-    session_id = input("Enter a session id for this conversation (leave blank to auto-generate): ").strip()
+    # For async agents, create a persistent event loop BEFORE loading the agent
+    # This ensures the aiosqlite connection is created in the same loop we'll use for queries
+    if is_async_agent:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+    else:
+        loop = None
+
+    llm = get_llm_model()
+    if not llm:
+        logger.error("Failed to load LLM model for interactive CLI.")
+        if loop:
+            loop.close()
+        return
+    agent = load_rag_chain(knowledge_base_name, llm=llm)
+    if not agent:
+        logger.error("Failed to load Agentic RAG for interactive CLI.")
+        if loop:
+            loop.close()
+        return
+
+    # Ask for or generate a session/thread id for conversation memory if not provided
     if not session_id:
-        session_id = str(uuid.uuid4())
-        console.print(f"[info]Generated session id: {session_id}[/info]")
+        session_id = input("Enter a session id for this conversation (leave blank to auto-generate): ").strip()
+        if not session_id:
+            session_id = str(uuid.uuid4())
+            console.print(f"[info]Generated session id: {session_id}[/info]")
+        else:
+            console.print(f"[info]Using session id: {session_id}[/info]")
     else:
         console.print(f"[info]Using session id: {session_id}[/info]")
     config = {"configurable": {"thread_id": session_id}}
     console.print(f"[success]Interactive CLI started (Mode: {rag_mode}). Type 'exit' to quit.[/success]")
     messages = []
-    while True:
-        query = console.input("[info]You: [/info]")
-        if query.lower() == "exit":
-            logger.info("Exiting interactive CLI.")
-            break
 
-        # Validate query for image files before processing
-        is_valid, invalid_files = validate_file_paths(query)
-        if not is_valid:
-            error_message = format_image_error_message(invalid_files)
+    try:
+        while True:
+            query = console.input("[info]You: [/info]")
+            if query.lower() == "exit":
+                logger.info("Exiting interactive CLI.")
+                break
+
+            # Validate query for image files before processing
+            is_valid, invalid_files = validate_file_paths(query)
+            if not is_valid:
+                error_message = format_image_error_message(invalid_files)
+                console.print(
+                    Panel.fit(
+                        error_message,
+                        title="[error]Unsupported Image Input[/error]",
+                        border_style="red",
+                    )
+                )
+                logger.warning(f"User query contained unsupported image files: {invalid_files}")
+                continue
+
+            messages.append({"role": "user", "content": query})
+
+            # Track query metrics
+            start_time = time.time()
+            success = True
+            error_msg = None
+            answer = ""
+
+            try:
+                with Live(Spinner("dots"), refresh_per_second=20):
+                    time.sleep(0.5)
+                    if is_async_agent:
+                        # Async agents (corrective, adaptive) - use persistent event loop
+                        answer = loop.run_until_complete(agent.invoke(query, config=config))
+                        logger.info(f"Query: {query}, Answer: {answer[:100]}...")
+                    else:
+                        # Basic ReAct agent
+                        result = agent.invoke({"messages": messages}, config=config)
+                        logger.info(f"Query: {query}, Result: {result}")
+                        # Extract the final answer from the agent's output
+                        answer = result["messages"][-1].content if "messages" in result and result["messages"] else str(result)
+            except Exception as e:
+                success = False
+                error_msg = str(e)
+                answer = f"Error processing query: {e}"
+                logger.error(f"Query failed: {e}")
+
+            # Log metrics
+            latency_ms = int((time.time() - start_time) * 1000)
+            metrics.log_query(
+                query=query,
+                latency_ms=latency_ms,
+                rag_mode=rag_mode,
+                knowledge_base=knowledge_base_name,
+                session_id=session_id,
+                success=success,
+                error=error_msg,
+            )
+
+            messages.append({"role": "assistant", "content": answer})
+            markdown_content = Markdown(answer)
             console.print(
                 Panel.fit(
-                    error_message,
-                    title="[error]Unsupported Image Input[/error]",
-                    border_style="red",
+                    markdown_content,
+                    title=f"[success]DocBases ({knowledge_base_name})[/success]",
+                    border_style="green",
                 )
             )
-            logger.warning(f"User query contained unsupported image files: {invalid_files}")
-            continue
-
-        messages.append({"role": "user", "content": query})
-
-        # Track query metrics
-        start_time = time.time()
-        success = True
-        error_msg = None
-        answer = ""
-
-        try:
-            with Live(Spinner("dots"), refresh_per_second=20):
-                time.sleep(0.5)
-                if is_async_agent:
-                    # Async agents (corrective, adaptive)
-                    answer = asyncio.run(agent.invoke(query, config=config))
-                    logger.info(f"Query: {query}, Answer: {answer[:100]}...")
-                else:
-                    # Basic ReAct agent
-                    result = agent.invoke({"messages": messages}, config=config)
-                    logger.info(f"Query: {query}, Result: {result}")
-                    # Extract the final answer from the agent's output
-                    answer = result["messages"][-1].content if "messages" in result and result["messages"] else str(result)
-        except Exception as e:
-            success = False
-            error_msg = str(e)
-            answer = f"Error processing query: {e}"
-            logger.error(f"Query failed: {e}")
-
-        # Log metrics
-        latency_ms = int((time.time() - start_time) * 1000)
-        metrics.log_query(
-            query=query,
-            latency_ms=latency_ms,
-            rag_mode=rag_mode,
-            knowledge_base=knowledge_base_name,
-            session_id=session_id,
-            success=success,
-            error=error_msg,
-        )
-
-        messages.append({"role": "assistant", "content": answer})
-        markdown_content = Markdown(answer)
-        console.print(
-            Panel.fit(
-                markdown_content,
-                title=f"[success]DocBases ({knowledge_base_name})[/success]",
-                border_style="green",
-            )
-        )
+    finally:
+        # Clean up the event loop for async agents
+        if loop is not None:
+            loop.close()
+            logger.info("Closed async event loop")
