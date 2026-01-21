@@ -160,11 +160,7 @@ class PersistentCheckpointer:
             Number of unique sessions.
         """
         try:
-            cursor = self.conn.execute(
-                """
-                SELECT COUNT(DISTINCT thread_id) FROM checkpoints
-            """
-            )
+            cursor = self.conn.execute("SELECT COUNT(DISTINCT thread_id) FROM checkpoints")
             count = cursor.fetchone()[0]
             return count
         except sqlite3.OperationalError:
