@@ -4,7 +4,13 @@
 
 An advanced document querying system that combines agentic workflows, RAG patterns (Corrective, Adaptive, & Multi-Agent), and semantic intelligence to provide accurate, context-aware answers from your knowledge bases.
 
-![DocBases](screenshot.png)
+### One-Line Usage
+
+```bash
+docb query interactive
+```
+
+Query your documents with natural language in an interactive, conversational interface. No configuration needed - just ask!
 
 ## Quick Start
 
