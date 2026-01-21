@@ -113,7 +113,17 @@ ON query_metrics(timestamp)
             (timestamp, query, latency_ms, retrieval_count, rag_mode, knowledge_base, session_id, success, error)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
-            (datetime.now().isoformat(), query, latency_ms, retrieval_count, rag_mode, knowledge_base, session_id, success, error),
+            (
+                datetime.now().isoformat(),
+                query,
+                latency_ms,
+                retrieval_count,
+                rag_mode,
+                knowledge_base,
+                session_id,
+                success,
+                error,
+            ),
         )
         self.conn.commit()
 
@@ -135,10 +145,19 @@ ON query_metrics(timestamp)
         total = self.conn.execute("SELECT COUNT(*) FROM query_metrics WHERE timestamp > ?", (cutoff,)).fetchone()[0]
 
         # Successful queries
-        success = self.conn.execute("SELECT COUNT(*) FROM query_metrics WHERE timestamp > ? AND success = TRUE", (cutoff,)).fetchone()[0]
+        success = self.conn.execute(
+            "SELECT COUNT(*) FROM query_metrics WHERE timestamp > ? AND success = TRUE",
+            (cutoff,),
+        ).fetchone()[0]
 
         # Average latency
-        avg_latency = self.conn.execute("SELECT AVG(latency_ms) FROM query_metrics WHERE timestamp > ?", (cutoff,)).fetchone()[0] or 0
+        avg_latency = (
+            self.conn.execute(
+                "SELECT AVG(latency_ms) FROM query_metrics WHERE timestamp > ?",
+                (cutoff,),
+            ).fetchone()[0]
+            or 0
+        )
 
         # P50 latency
         p50_latency = self.conn.execute(
@@ -186,7 +205,13 @@ ON query_metrics(timestamp)
         ).fetchall()
 
         # Average retrieval count
-        avg_retrieval = self.conn.execute("SELECT AVG(retrieval_count) FROM query_metrics WHERE timestamp > ?", (cutoff,)).fetchone()[0] or 0
+        avg_retrieval = (
+            self.conn.execute(
+                "SELECT AVG(retrieval_count) FROM query_metrics WHERE timestamp > ?",
+                (cutoff,),
+            ).fetchone()[0]
+            or 0
+        )
 
         return {
             "total_queries": total,
@@ -290,7 +315,11 @@ ON query_metrics(timestamp)
             error_table.add_column("Error", style="error")
 
             for err in errors:
-                error_table.add_row(err["timestamp"][:19], err["query"][:30] + "...", err["error"][:40] if err["error"] else "Unknown")
+                error_table.add_row(
+                    err["timestamp"][:19],
+                    err["query"][:30] + "...",
+                    err["error"][:40] if err["error"] else "Unknown",
+                )
 
             console.print(error_table)
 
