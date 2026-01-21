@@ -58,27 +58,27 @@ class MetricsTracker:
         """Create metrics tables if they don't exist."""
         self.conn.execute(
             """
-CREATE TABLE IF NOT EXISTS query_metrics (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    timestamp TEXT NOT NULL,
-    query TEXT NOT NULL,
-    latency_ms INTEGER NOT NULL,
-    retrieval_count INTEGER DEFAULT 0,
-    rag_mode TEXT NOT NULL,
-    knowledge_base TEXT,
-    session_id TEXT,
-    success BOOLEAN DEFAULT TRUE,
-    error TEXT
-)
-"""
+            CREATE TABLE IF NOT EXISTS query_metrics (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                timestamp TEXT NOT NULL,
+                query TEXT NOT NULL,
+                latency_ms INTEGER NOT NULL,
+                retrieval_count INTEGER DEFAULT 0,
+                rag_mode TEXT NOT NULL,
+                knowledge_base TEXT,
+                session_id TEXT,
+                success BOOLEAN DEFAULT TRUE,
+                error TEXT
+            )
+        """
         )
 
         # Create index for efficient time-based queries
         self.conn.execute(
             """
-CREATE INDEX IF NOT EXISTS idx_query_metrics_timestamp
-ON query_metrics(timestamp)
-"""
+            CREATE INDEX IF NOT EXISTS idx_query_metrics_timestamp
+            ON query_metrics(timestamp)
+        """
         )
 
         self.conn.commit()
