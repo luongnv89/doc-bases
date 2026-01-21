@@ -8,7 +8,7 @@ from rich.table import Table
 from src.cli.utils import confirm, console, print_error, print_info, print_section, print_success
 from src.utils.document_loader import DocumentLoader
 from src.utils.kb_metadata import KBMetadataManager, collect_file_info, collect_single_file_info
-from src.utils.rag_utils import delete_knowledge_base, list_knowledge_bases, setup_rag
+from src.utils.rag_utils import create_vector_store, delete_knowledge_base, list_knowledge_bases
 from src.utils.utilities import generate_knowledge_base_name
 
 app = typer.Typer(help="Knowledge base management")
@@ -81,11 +81,11 @@ def add(
         print_info("Cancelled")
         raise typer.Exit(0)
 
-    # Setup RAG
-    print_info("Setting up knowledge base with RAG...")
+    # Create vector store (no RAG agent needed for kb add)
+    print_info("Creating vector store...")
 
     try:
-        _ = setup_rag(docs, kb_name)
+        create_vector_store(docs, kb_name)
         print_success(f"Knowledge base '{kb_name}' created successfully")
 
         # Save metadata for change detection

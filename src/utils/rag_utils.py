@@ -66,6 +66,42 @@ console = Console(theme=custom_theme)
 KNOWLEDGE_BASE_DIR = "knowledges"
 
 
+def create_vector_store(documents: list[Document], knowledge_base_name: str) -> Chroma:
+    """
+    Create a vector store from documents without initializing a RAG agent.
+
+    This function only creates embeddings and stores them in ChromaDB.
+    Use this for `kb add` operations where you don't need the full RAG agent.
+
+    Args:
+        documents: List of documents to embed and store.
+        knowledge_base_name: Name of the knowledge base.
+
+    Returns:
+        The created Chroma vector store.
+    """
+    logger.info(f"Creating vector store for knowledge base: '{knowledge_base_name}'")
+    persist_directory = os.path.join(KNOWLEDGE_BASE_DIR, knowledge_base_name)
+    logger.debug(f"Persist directory: {persist_directory}")
+
+    embeddings = get_embedding_model()
+    logger.debug(f"Embedding model: {embeddings}")
+
+    console.print(f"[header]Creating vector store for '{knowledge_base_name}'...[/header]")
+    vectorstore = Chroma(persist_directory=persist_directory, embedding_function=embeddings)
+
+    logger.info(f"Starting embedding process for '{knowledge_base_name}'.")
+    with tqdm(total=len(documents), desc="Embedding data") as pbar:
+        for doc in documents:
+            vectorstore.add_documents([doc])
+            pbar.update(1)
+
+    logger.info(f"Embedding process for '{knowledge_base_name}' completed.")
+    console.print(f"[success]Vector store for '{knowledge_base_name}' created successfully.[/success]")
+
+    return vectorstore
+
+
 def get_rag_mode() -> str:
     """Get configured RAG mode from environment."""
     return os.getenv("RAG_MODE", "basic").lower()
