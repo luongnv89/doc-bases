@@ -100,7 +100,7 @@ def health_check(
 
             embeddings_fn = get_embedding_model()
             # Try to connect to ChromaDB
-            vectorstore = Chroma(persist_directory="knowledges/test", embedding_function=embeddings_fn)
+            Chroma(persist_directory="knowledges/test", embedding_function=embeddings_fn)
             print_success("Vector store accessible")
 
         except Exception as e:

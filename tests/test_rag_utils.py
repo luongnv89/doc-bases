@@ -60,6 +60,7 @@ def test_setup_rag(test_documents, test_knowledge_base_name, mock_temp_dir, mock
     with (
         patch("src.utils.rag_utils.KNOWLEDGE_BASE_DIR", mock_temp_dir),
         patch("src.utils.rag_utils.get_embedding_model", return_value=mock_embeddings),
+        patch("src.utils.rag_utils.get_rag_mode", return_value="basic"),
         patch("src.utils.rag_utils.Chroma") as mock_chroma,
         patch("src.utils.rag_utils.create_react_agent") as mock_agent,
     ):
@@ -105,6 +106,7 @@ def test_load_rag_chain(test_documents, test_knowledge_base_name, mock_temp_dir,
     with (
         patch("src.utils.rag_utils.KNOWLEDGE_BASE_DIR", mock_temp_dir),
         patch("src.utils.rag_utils.get_embedding_model", return_value=mock_embeddings),
+        patch("src.utils.rag_utils.get_rag_mode", return_value="basic"),
         patch("src.utils.rag_utils.Chroma") as mock_chroma,
         patch("src.utils.rag_utils.create_react_agent") as mock_agent,
     ):
@@ -141,6 +143,7 @@ def test_interactive_cli(test_knowledge_base_name, mock_temp_dir, mock_llm, mock
         patch("src.utils.rag_utils.KNOWLEDGE_BASE_DIR", mock_temp_dir),
         patch("src.utils.rag_utils.get_embedding_model", return_value=mock_embeddings),
         patch("src.utils.rag_utils.get_llm_model", return_value=mock_llm),
+        patch("src.utils.rag_utils.get_rag_mode", return_value="basic"),
         patch("src.utils.rag_utils.Chroma") as mock_chroma,
         patch("src.utils.rag_utils.create_react_agent") as mock_agent,
         patch("src.utils.rag_utils.console") as mock_console,
@@ -165,6 +168,7 @@ def test_rag_query(test_documents, test_knowledge_base_name, mock_temp_dir, mock
     with (
         patch("src.utils.rag_utils.KNOWLEDGE_BASE_DIR", mock_temp_dir),
         patch("src.utils.rag_utils.get_embedding_model", return_value=mock_embeddings),
+        patch("src.utils.rag_utils.get_rag_mode", return_value="basic"),
         patch("src.utils.rag_utils.Chroma") as mock_chroma,
         patch("src.utils.rag_utils.create_react_agent") as mock_agent,
     ):

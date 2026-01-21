@@ -10,6 +10,7 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_groq import ChatGroq
 from langchain_ollama import ChatOllama
 from langchain_openai import ChatOpenAI
+from pydantic import SecretStr
 from rich.console import Console
 
 from src.utils.logger import custom_theme, get_logger  # Import custom_theme
@@ -81,7 +82,7 @@ def get_llm_model(
                 console.print("[error]OPENAI_API_KEY not found in environment variables or user input.[/error]")
                 raise ValueError("OPENAI_API_KEY not found in environment variables or user input.")
             console.print("[success]Using OpenAI Model[/success]")
-            return ChatOpenAI(model=model, openai_api_key=api_key, base_url=api_base)
+            return ChatOpenAI(model=model, api_key=SecretStr(api_key), base_url=api_base)
 
         elif provider == "grok":
             if not api_key:
@@ -91,7 +92,7 @@ def get_llm_model(
                 console.print("[error]GROQ_API_KEY not found in environment variables or user input.[/error]")
                 raise ValueError("GROQ_API_KEY not found in environment variables or user input.")
             console.print("[success]Using Groq Model[/success]")
-            return ChatGroq(api_key=api_key, model=model)
+            return ChatGroq(api_key=SecretStr(api_key), model=model)
 
         elif provider == "ollama":
             console.print("[success]Using Ollama Model[/success]")
@@ -104,7 +105,7 @@ def get_llm_model(
                 console.print(f"[info]Getting {api_key_env_key} from env[/info]")
             if api_key:
                 console.print(f"[success]Using Custom Model provider {provider}[/success]")
-                return ChatOpenAI(model=model, openai_api_key=api_key, base_url=api_base)
+                return ChatOpenAI(model=model, api_key=SecretStr(api_key), base_url=api_base)
             else:
                 console.print(f"[error]Provider '{provider}' not supported and no API key provided.[/error]")
                 raise ValueError(f"Provider '{provider}' not supported and no API key provided.")

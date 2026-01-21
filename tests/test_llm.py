@@ -3,6 +3,7 @@ import os
 from unittest.mock import patch
 
 import pytest
+from pydantic import SecretStr
 
 from src.models.llm import get_llm_model
 
@@ -66,13 +67,13 @@ def test_get_llm_model_openai(mock_llm):
         api_key=TEST_API_KEY,
         api_base=TEST_API_BASE,
     )
-    mock_llm["openai"].assert_called_once_with(model=TEST_MODEL, openai_api_key=TEST_API_KEY, base_url=TEST_API_BASE)
+    mock_llm["openai"].assert_called_once_with(model=TEST_MODEL, api_key=SecretStr(TEST_API_KEY), base_url=TEST_API_BASE)
 
 
 def test_get_llm_model_groq(mock_llm):
     """Test get_llm_model for Groq provider."""
     get_llm_model(provider="grok", model=TEST_MODEL, api_key=TEST_API_KEY)
-    mock_llm["grok"].assert_called_once_with(api_key=TEST_API_KEY, model=TEST_MODEL)
+    mock_llm["grok"].assert_called_once_with(api_key=SecretStr(TEST_API_KEY), model=TEST_MODEL)
 
 
 def test_get_llm_model_ollama(mock_llm):
@@ -86,7 +87,7 @@ def test_get_llm_model_custom_provider(mock_llm):
     custom_provider = "custom_provider"
     with patch.dict(os.environ, {f"{custom_provider.upper()}_API_KEY": TEST_API_KEY}):
         get_llm_model(provider=custom_provider, model=TEST_MODEL, api_base=TEST_API_BASE)
-    mock_llm["openai"].assert_called_once_with(model=TEST_MODEL, openai_api_key=TEST_API_KEY, base_url=TEST_API_BASE)
+    mock_llm["openai"].assert_called_once_with(model=TEST_MODEL, api_key=SecretStr(TEST_API_KEY), base_url=TEST_API_BASE)
 
 
 def test_get_llm_model_missing_provider():

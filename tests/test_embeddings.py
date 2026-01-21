@@ -3,6 +3,7 @@ import os
 from unittest.mock import patch
 
 import pytest
+from pydantic import SecretStr
 
 from src.models.embeddings import get_embedding_model
 
@@ -49,7 +50,7 @@ def test_get_embedding_model_default(mock_env_vars, mock_embeddings):
     with patch.dict(os.environ, {"EMB_API_BASE": ""}, clear=False):
         get_embedding_model()
         # base_url will be empty string when EMB_API_BASE is set to ""
-        mock_embeddings["openai"].assert_called_once_with(openai_api_key=TEST_API_KEY, base_url="")
+        mock_embeddings["openai"].assert_called_once_with(api_key=SecretStr(TEST_API_KEY), base_url="")
 
 
 def test_get_embedding_model_openai(mock_embeddings):
@@ -60,7 +61,7 @@ def test_get_embedding_model_openai(mock_embeddings):
         api_key=TEST_API_KEY,
         api_base=TEST_API_BASE,
     )
-    mock_embeddings["openai"].assert_called_once_with(openai_api_key=TEST_API_KEY, base_url=TEST_API_BASE)
+    mock_embeddings["openai"].assert_called_once_with(api_key=SecretStr(TEST_API_KEY), base_url=TEST_API_BASE)
 
 
 def test_get_embedding_model_ollama(mock_embeddings):
@@ -72,7 +73,7 @@ def test_get_embedding_model_ollama(mock_embeddings):
 def test_get_embedding_model_google(mock_embeddings):
     """Test get_embedding_model for Google provider."""
     get_embedding_model(provider="google", model=TEST_MODEL, api_key=TEST_API_KEY)
-    mock_embeddings["google"].assert_called_once_with(model=f"models/{TEST_MODEL}", google_api_key=TEST_API_KEY)
+    mock_embeddings["google"].assert_called_once_with(model=f"models/{TEST_MODEL}", api_key=SecretStr(TEST_API_KEY))
 
 
 def test_get_embedding_model_custom_provider(mock_embeddings):
@@ -80,7 +81,7 @@ def test_get_embedding_model_custom_provider(mock_embeddings):
     custom_provider = "custom_provider"
     with patch.dict(os.environ, {f"{custom_provider.upper()}_API_KEY": TEST_API_KEY}):
         get_embedding_model(provider=custom_provider, model=TEST_MODEL, api_base=TEST_API_BASE)
-    mock_embeddings["openai"].assert_called_once_with(openai_api_key=TEST_API_KEY, base_url=TEST_API_BASE)
+    mock_embeddings["openai"].assert_called_once_with(api_key=SecretStr(TEST_API_KEY), base_url=TEST_API_BASE)
 
 
 def test_get_embedding_model_missing_provider():

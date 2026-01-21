@@ -349,6 +349,7 @@ def interactive_cli(knowledge_base_name: str | None = None, session_id: str | No
                     time.sleep(0.5)
                     if is_async_agent:
                         # Async agents (corrective, adaptive) - use persistent event loop
+                        assert loop is not None, "Event loop must be initialized for async agents"
                         answer = loop.run_until_complete(agent.invoke(query, config=config))
                         logger.info(f"Query: {query}, Answer: {answer[:100]}...")
                     else:

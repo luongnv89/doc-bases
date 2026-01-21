@@ -7,7 +7,7 @@ Routes queries to optimal retrieval strategy:
 - Web: External web search for out-of-domain queries
 """
 
-from typing import Annotated, Literal, TypedDict
+from typing import Annotated, Any, Literal, TypedDict
 
 from langchain_core.documents import Document
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
@@ -72,13 +72,14 @@ Respond with ONLY: simple, complex, or web""",
         if classification not in ["simple", "complex", "web"]:
             classification = "simple"
 
-        state["query_type"] = classification
+        state["query_type"] = classification  # type: ignore
         logger.info(f"Classified as: {classification}")
         return state
 
-    def route_query(self, state: AdaptiveRAGState) -> str:
+    def route_query(self, state: AdaptiveRAGState) -> Literal["simple", "complex", "web"]:
         """Route to appropriate retrieval strategy."""
-        return state["query_type"]
+        query_type = state.get("query_type", "simple")
+        return query_type if query_type in ["simple", "complex", "web"] else "simple"  # type: ignore
 
     async def simple_retrieval(self, state: AdaptiveRAGState) -> AdaptiveRAGState:
         """Fast direct retrieval for simple queries."""
@@ -156,7 +157,7 @@ Answer:"""
 
         return state
 
-    def _build_graph(self) -> StateGraph:
+    def _build_graph(self):
         """Build workflow graph."""
         workflow = StateGraph(AdaptiveRAGState)
 
@@ -179,9 +180,9 @@ Answer:"""
 
         return workflow.compile(checkpointer=self.checkpointer)
 
-    async def invoke(self, question: str, config: dict = None) -> str:
+    async def invoke(self, question: str, config: dict[Any, Any] | None = None) -> str:
         """Run workflow."""
-        initial_state = {"messages": [], "question": question, "query_type": None, "documents": [], "generation": ""}
+        initial_state: AdaptiveRAGState = {"messages": [], "question": question, "query_type": None, "documents": [], "generation": ""}
 
         result = await self.graph.ainvoke(initial_state, config=config)
         return result["generation"]

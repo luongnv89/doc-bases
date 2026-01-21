@@ -115,7 +115,8 @@ class ConfigManager:
             return
 
         env_vars = dotenv_values(env_file_path)
-        self._env_vars.update(env_vars)
+        # Filter out None values for type safety
+        self._env_vars.update({k: v for k, v in env_vars.items() if v is not None})
 
     def _load_yaml_config(self, yaml_path: Path, source: str) -> None:
         """Load and merge YAML configuration."""

@@ -10,7 +10,7 @@ Workflow:
 6. Return validated answer
 """
 
-from typing import Annotated, Literal, TypedDict
+from typing import Annotated, Any, Literal, TypedDict
 
 from langchain_core.documents import Document
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
@@ -135,7 +135,7 @@ Answer:"""
 
         return state
 
-    def _build_graph(self) -> StateGraph:
+    def _build_graph(self):
         """Build the CRAG workflow graph."""
         workflow = StateGraph(CRAGState)
 
@@ -156,7 +156,7 @@ Answer:"""
 
         return workflow.compile(checkpointer=self.checkpointer)
 
-    async def invoke(self, question: str, config: dict = None) -> str:
+    async def invoke(self, question: str, config: dict[Any, Any] | None = None) -> str:
         """Run the CRAG workflow."""
         initial_state = {
             "messages": [],

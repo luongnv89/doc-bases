@@ -28,7 +28,7 @@ class PersistentCheckpointer:
     including listing sessions, cleanup, and deletion.
     """
 
-    def __init__(self, db_path: str = None):
+    def __init__(self, db_path: str | None = None):
         """
         Initialize persistent checkpointer.
 
@@ -182,7 +182,7 @@ class PersistentCheckpointer:
             logger.error(f"Error closing checkpointer: {e}")
 
 
-def get_checkpointer(use_persistent: bool = None):
+def get_checkpointer(use_persistent: bool | None = None):
     """
     Get appropriate checkpointer based on configuration (sync version).
 
@@ -209,7 +209,7 @@ def get_checkpointer(use_persistent: bool = None):
         return MemorySaver()
 
 
-def get_async_checkpointer(use_persistent: bool = None) -> AsyncSqliteSaver | MemorySaver:
+def get_async_checkpointer(use_persistent: bool | None = None) -> AsyncSqliteSaver | MemorySaver:
     """
     Get appropriate async checkpointer based on configuration.
 

@@ -45,14 +45,14 @@ def setup_langsmith_tracing(api_key: str | None = None, project: str | None = No
         return False
 
     # Get project name
-    project = project or os.getenv("LANGSMITH_PROJECT", "doc-bases")
+    project_name: str = project or os.getenv("LANGSMITH_PROJECT", "doc-bases") or "doc-bases"
 
     # Set environment variables for LangChain
     os.environ["LANGCHAIN_TRACING_V2"] = "true"
     os.environ["LANGCHAIN_API_KEY"] = api_key
-    os.environ["LANGCHAIN_PROJECT"] = project
+    os.environ["LANGCHAIN_PROJECT"] = project_name
 
-    logger.info(f"LangSmith tracing enabled for project: {project}")
+    logger.info(f"LangSmith tracing enabled for project: {project_name}")
     return True
 
 

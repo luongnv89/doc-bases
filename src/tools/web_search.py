@@ -35,7 +35,7 @@ def web_search(query: str, max_results: int = 3) -> str:
         return "Web search unavailable. Install: pip install duckduckgo-search"
 
     try:
-        search = DuckDuckGoSearchResults(max_results=max_results)
+        search = DuckDuckGoSearchResults(num_results=max_results)
         results = search.run(query)
         logger.info(f"Web search for '{query}': {len(results)} chars returned")
         return results
@@ -54,7 +54,7 @@ def web_search_to_documents(query: str, max_results: int = 3) -> list[Document]:
         return []
 
     try:
-        search = DuckDuckGoSearchResults(max_results=max_results)
+        search = DuckDuckGoSearchResults(num_results=max_results)
         results = search.invoke(query)
 
         documents = []

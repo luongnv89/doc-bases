@@ -29,8 +29,8 @@ langchain-ollama>=0.2.0
 # -----------------------------------------------------------------------------
 # Existing Utilities - KEEP
 # CLI Framework & Configuration
-# NOTE: typer[all] includes rich but we keep our rich version for consistency
-typer[all]>=0.9.0                # Modern CLI framework with Rich integration
+# NOTE: Rich is specified separately below for consistency
+typer>=0.9.0                # Modern CLI framework
 pyyaml>=6.0                       # YAML configuration support
 rich>=13.9.4
 python-dotenv>=1.0.1

@@ -2,7 +2,7 @@
 Supervisor for multi-agent orchestration.
 """
 
-from typing import Annotated, Literal, TypedDict
+from typing import Annotated, Any, Literal, TypedDict
 
 from langchain_core.documents import Document
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
@@ -103,9 +103,10 @@ What's the next step?""",
         logger.info(f"Supervisor routing to: {state['next_agent']}")
         return state
 
-    def route_to_agent(self, state: SupervisorState) -> str:
+    def route_to_agent(self, state: SupervisorState) -> Literal["retriever", "summarizer", "generator", "critic", "END"]:
         """Return next agent based on state."""
-        return state["next_agent"]
+        next_agent = state.get("next_agent", "END")
+        return next_agent if next_agent in ["retriever", "summarizer", "generator", "critic", "END"] else "END"  # type: ignore
 
     async def call_retriever(self, state: SupervisorState) -> SupervisorState:
         """Retrieve documents from vectorstore."""
@@ -200,7 +201,7 @@ Provide a comprehensive answer:"""
 
         return state
 
-    def _build_graph(self) -> StateGraph:
+    def _build_graph(self):
         """Build the multi-agent workflow graph."""
         workflow = StateGraph(SupervisorState)
 
@@ -231,9 +232,9 @@ Provide a comprehensive answer:"""
 
         return workflow.compile(checkpointer=self.checkpointer)
 
-    async def invoke(self, question: str, config: dict = None) -> str:
+    async def invoke(self, question: str, config: dict[Any, Any] | None = None) -> str:
         """Run the multi-agent workflow."""
-        initial_state = {
+        initial_state: SupervisorState = {
             "messages": [],
             "question": question,
             "next_agent": None,

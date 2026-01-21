@@ -13,3 +13,7 @@ ruff>=0.1.0
 mypy>=1.0.0
 isort>=5.0.0
 flake8>=6.0.0
+
+# Type Stubs
+types-PyYAML>=6.0.0
+types-requests>=2.31.0

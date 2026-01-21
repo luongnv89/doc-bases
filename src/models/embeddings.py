@@ -9,6 +9,7 @@ from langchain_core.embeddings import Embeddings
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from langchain_ollama import OllamaEmbeddings
 from langchain_openai import OpenAIEmbeddings
+from pydantic import SecretStr
 from rich.console import Console
 
 from src.utils.logger import custom_theme, get_logger  # Import custom_theme
@@ -71,7 +72,7 @@ def get_embedding_model(
                 console.print("[error]OPENAI_API_KEY not found in environment variables or user input.[/error]")
                 raise ValueError("OPENAI_API_KEY not found in environment variables or user input.")
             console.print("[success]Using OpenAI Embeddings Model[/success]")
-            return OpenAIEmbeddings(openai_api_key=api_key, base_url=api_base)
+            return OpenAIEmbeddings(api_key=SecretStr(api_key), base_url=api_base)
 
         elif provider == "ollama":
             console.print("[success]Using Ollama Embeddings Model[/success]")
@@ -88,7 +89,7 @@ def get_embedding_model(
             if not model.startswith("models/"):
                 model = f"models/{model}"
             console.print(f"[success]Using Google Embeddings Model: {model}[/success]")
-            return GoogleGenerativeAIEmbeddings(model=model, google_api_key=api_key)
+            return GoogleGenerativeAIEmbeddings(model=model, api_key=SecretStr(api_key))
 
         else:
             if not api_key:
@@ -97,7 +98,7 @@ def get_embedding_model(
                 console.print(f"[info]Getting {api_key_env_key} from env[/info]")
             if api_key:
                 console.print(f"[success]Using Custom Embedding Model provider {provider}[/success]")
-                return OpenAIEmbeddings(openai_api_key=api_key, base_url=api_base)
+                return OpenAIEmbeddings(api_key=SecretStr(api_key), base_url=api_base)
             else:
                 console.print(f"[error]Provider '{provider}' not supported and no API key provided.[/error]")
                 raise ValueError(f"Provider '{provider}' not supported and no API key provided.")

@@ -2,6 +2,8 @@
 Specialized retriever agent with query decomposition.
 """
 
+from typing import Any
+
 from langchain_core.documents import Document
 from langchain_core.tools import tool
 from langgraph.prebuilt import create_react_agent
@@ -46,14 +48,14 @@ Return as numbered list."""
         tools = [retrieve_documents, decompose_query]
         return create_react_agent(self.llm, tools, checkpointer=self.checkpointer)
 
-    async def retrieve(self, question: str, config: dict = None) -> dict:
+    async def retrieve(self, question: str, config: dict[Any, Any] | None = None) -> dict:
         """Execute retrieval workflow."""
         result = await self.agent.ainvoke(
             {"messages": [{"role": "user", "content": f"Retrieve relevant information for: {question}"}]}, config=config
         )
         return result
 
-    def retrieve_sync(self, question: str, config: dict = None) -> dict:
+    def retrieve_sync(self, question: str, config: dict[Any, Any] | None = None) -> dict:
         """Execute retrieval workflow synchronously."""
         result = self.agent.invoke({"messages": [{"role": "user", "content": f"Retrieve relevant information for: {question}"}]}, config=config)
         return result

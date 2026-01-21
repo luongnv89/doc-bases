@@ -185,13 +185,10 @@ def single(
         thread_id = str(uuid.uuid4())
         config = {"configurable": {"thread_id": thread_id}}
 
-        # Prepare input - try with HumanMessage first
-        try:
-            from langchain_core.messages import HumanMessage
+        # Prepare input with HumanMessage
+        from langchain_core.messages import HumanMessage
 
-            input_data = {"messages": [HumanMessage(content=query)]}
-        except Exception:
-            input_data = {"messages": [{"role": "user", "content": query}]}
+        input_data = {"messages": [HumanMessage(content=query)]}
 
         # Invoke agent
         if inspect.iscoroutinefunction(agent.invoke):  # noqa: SIM108
@@ -306,13 +303,10 @@ def batch(
             thread_id = f"{kb}-{uuid.uuid4()}"
             config = {"configurable": {"thread_id": thread_id}}
 
-            # Prepare input
-            try:
-                from langchain_core.messages import HumanMessage
+            # Prepare input with HumanMessage
+            from langchain_core.messages import HumanMessage
 
-                input_data = {"messages": [HumanMessage(content=query_text)]}
-            except Exception:
-                input_data = {"messages": [{"role": "user", "content": query_text}]}
+            input_data = {"messages": [HumanMessage(content=query_text)]}
 
             # Invoke agent
             if inspect.iscoroutinefunction(agent.invoke):  # noqa: SIM108
