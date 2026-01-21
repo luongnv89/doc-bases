@@ -2,6 +2,10 @@
 
 These tests verify that each RAG mode (basic, corrective, adaptive, multi_agent)
 can successfully load a knowledge base and answer queries.
+
+NOTE: These tests require a running LLM/embedding service (e.g., Ollama)
+and proper environment configuration. They are skipped in CI environments
+where EMB_PROVIDER is not configured.
 """
 
 import os
@@ -20,10 +24,20 @@ TEST_KB_NAME = "rag-e2e-test"
 TEST_DOCS_DIR = Path("test_rag_e2e")
 KNOWLEDGES_DIR = Path("knowledges")
 
+# Check if environment is properly configured for E2E tests
+HAS_EMB_PROVIDER = os.environ.get("EMB_PROVIDER") is not None
+SKIP_REASON = "Skipping E2E test: EMB_PROVIDER not configured (required for embedding operations)"
+
+# Marker to skip all tests in this module if EMB_PROVIDER is not set
+pytestmark = pytest.mark.skipif(not HAS_EMB_PROVIDER, reason=SKIP_REASON)
+
 
 @pytest.fixture(scope="module", autouse=True)
 def setup_test_kb():
     """Create a test knowledge base if it doesn't exist."""
+    if not HAS_EMB_PROVIDER:
+        pytest.skip(SKIP_REASON)
+
     kb_path = KNOWLEDGES_DIR / TEST_KB_NAME
 
     if not kb_path.exists():
