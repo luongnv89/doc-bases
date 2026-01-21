@@ -88,14 +88,41 @@ Then in the legacy menu:
 
 ## Key Features
 
-- **Multi-RAG Modes**: Switch between Basic, Corrective, Adaptive, and Multi-Agent modes
-- **Advanced Document Processing**: Docling parser for PDFs with table extraction, semantic chunking
-- **Intelligent Query Routing**: Adaptive RAG routes simple/complex/web queries optimally
-- **Self-Correcting**: Corrective RAG validates retrieval, triggers web search if needed
-- **Multi-Agent Orchestration**: Specialized agents (Retriever, Summarizer, Critic) with supervisor
-- **Persistent Memory**: SQLite-backed session storage with resumable conversations
-- **Performance Observability**: LangSmith integration, metrics dashboard, query logging
-- **File Change Detection**: Automatic detection of source file changes with update prompts
+### Core RAG Capabilities
+- **4 Multi-RAG Modes**:
+  - **Basic**: Fast ReAct agent for simple queries (200-800ms)
+  - **Corrective (CRAG)**: Self-validating with hallucination detection (600-1600ms)
+  - **Adaptive**: Intelligent query routing (simple/complex/web) (500-1700ms)
+  - **Multi-Agent**: Specialized agents with iterative refinement (2-6s)
+
+### Document Processing
+- **Advanced PDF Parsing**: Docling integration with table extraction, formula recognition, layout analysis
+- **Multiple Source Types**: GitHub repos, local files, folders, websites, download URLs
+- **Semantic Chunking**: Embedding-based chunking preserves topic coherence vs. character-based splitting
+- **Automatic Format Detection**: Auto-detects MIME types (PDF, DOCX, PPTX, XLSX, HTML, Markdown, Images)
+
+### Knowledge Base Management
+- **File Change Detection**: Automatically detects added/modified/deleted source files with metadata tracking
+- **Multiple Knowledge Bases**: Independent vector stores and sessions per knowledge base
+- **Metadata Persistence**: Tracks file hashes, modification times, and source information
+
+### Agent System
+- **Specialized Agents**: Retriever, Summarizer, Critic, and Supervisor orchestrator
+- **Intelligent Routing**: Query classification and optimal strategy selection
+- **Iterative Refinement**: Automatic answer improvement based on critic feedback (up to 3 iterations)
+- **Query Decomposition**: Complex queries broken into sub-queries for comprehensive answers
+
+### Retrieval & Generation
+- **Flexible LLM Support**: Ollama (local), OpenAI, Google GenAI, Groq, custom providers
+- **Multiple Embeddings**: Ollama, OpenAI, Google GenAI embedding models
+- **Web Search Integration**: DuckDuckGo fallback for out-of-domain queries (Corrective & Adaptive RAG)
+- **Relevance Grading**: LLM-based document relevance scoring and filtering
+
+### Persistence & Observability
+- **Persistent Memory**: SQLite-backed conversation sessions (resumable across restarts)
+- **Metrics Tracking**: Query latency, retrieval stats, success rates, mode distribution
+- **LangSmith Integration**: Optional distributed tracing for debugging and optimization
+- **Quality Evaluation**: Hallucination detection, relevance grading, answer validation
 
 ## Documentation
 

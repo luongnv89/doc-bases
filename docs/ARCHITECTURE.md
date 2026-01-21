@@ -151,6 +151,46 @@ relevance_threshold: float = 0.5
 Source → Load → Parse [Docling|Fallback] → Split [Semantic|Recursive] → Embed → Store
 ```
 
+#### File Change Detection (`src/utils/kb_metadata.py`)
+
+**Purpose**: Track source file changes and automatically detect when knowledge bases need updating
+
+**Features**:
+- **Metadata Storage**: Stores file information (path, size, modification time, hash) in `knowledges/{kb_name}/metadata.json`
+- **Change Types Detected**:
+  - **Added Files**: New files in source directory
+  - **Modified Files**: Existing files with changed content
+  - **Deleted Files**: Files removed from source
+- **Automatic Prompts**: User prompted when source changes detected on next query
+- **Smart Updates**: Only re-indexes changed files (partial updates)
+- **Metadata Format**:
+  ```json
+  {
+    "kb_name": "My KB",
+    "source": "/path/to/source",
+    "created_at": "2026-01-21T10:00:00",
+    "last_updated": "2026-01-21T14:30:00",
+    "files": [
+      {
+        "path": "document.pdf",
+        "size": 2048000,
+        "mtime": 1674316800,
+        "hash": "sha256:abc123..."
+      }
+    ]
+  }
+  ```
+- **Usage Example**:
+  ```bash
+  # Automatic detection on query
+  docb query interactive --kb "My KB"
+  # → Detects changes in source directory
+  # → Prompts: "3 files changed. Update KB? [y/n]"
+
+  # Manual check
+  docb kb info "My KB"  # Shows change summary
+  ```
+
 #### Docling Integration (`src/utils/docling_loader.py`)
 
 Advanced document parsing for structured formats:
@@ -476,6 +516,171 @@ LANGSMITH_TRACING=false
 - ChromaDB: ~100MB per 1,000 docs
 - SQLite checkpoints: <1MB per 100 sessions
 - Metrics DB: ~1MB per 10,000 queries
+
+## Advanced Features Guide
+
+### KB File Change Detection
+
+**Scenario**: You have a knowledge base from documents that get updated regularly.
+
+**Traditional Approach**: Need to manually delete and re-create KB each time
+
+**DocBases Solution**: Automatic change detection!
+
+**How It Works**:
+
+1. **First Load**: Creates `metadata.json` with all file hashes and timestamps
+2. **Subsequent Queries**: Compares current files against metadata
+3. **Change Detection**:
+   - Calculates SHA256 of files
+   - Compares sizes and modification times
+   - Reports: "3 added, 2 modified, 1 deleted"
+4. **User Prompted**: "Update knowledge base? [y/n]"
+5. **Smart Update**: Only re-processes changed files
+
+**Example Workflow**:
+```bash
+# Week 1: Create KB from docs
+docb kb add folder ./docs --name "Project Docs"
+# → Creates metadata.json
+
+# Week 2: One doc was updated
+docb query interactive --kb "Project Docs"
+# → Detects: 1 file modified
+# → Prompts: "1 file changed. Update KB? [y/n]"
+# → Y: Re-indexes only changed file (fast)
+
+# Week 3: New documentation added
+docb kb info "Project Docs"
+# → Shows: "2 added files detected"
+# → Suggests re-indexing
+```
+
+### Semantic Chunking vs. Character-Based
+
+**Character-Based (Default)**:
+```
+Splits at fixed sizes (1000 chars)
+- Fast processing
+- Simple implementation
+- May break in middle of sentences/topics
+```
+
+**Semantic Chunking** (Enable: `CHUNKING_STRATEGY=semantic`):
+```
+Splits based on embedding similarity
+- Preserves topic coherence
+- Better retrieval quality
+- Slightly slower processing
+- Recommended for quality-focused scenarios
+```
+
+**Example**:
+```
+Document: "...[topic A content]... Now let's discuss [topic B content]..."
+
+Character split (breaks mid-sentence):
+  Chunk 1: "...[topic A]...Now let's"
+  Chunk 2: "discuss [topic B]..."  ❌ Broken context
+
+Semantic split (natural boundaries):
+  Chunk 1: "...[complete topic A]..."
+  Chunk 2: "[complete topic B]..."  ✅ Coherent chunks
+```
+
+### Docling vs. Standard Parsing
+
+**Standard PDF Parsing**: Text extraction, basic formatting
+
+**Docling Integration** (Enable: `USE_DOCLING=true`):
+```
+- Table structure preservation
+- Formula recognition (LaTeX, MathML)
+- Layout analysis
+- Column detection
+- Header/footer handling
+- Multi-page context
+```
+
+**When to Use Docling**:
+- ✅ Technical documents with formulas
+- ✅ Reports with complex tables
+- ✅ Academic papers
+- ✅ Documents requiring precise layout
+
+**When Basic Parsing Sufficient**:
+- ✅ Plain text files
+- ✅ Simple documentation
+- ✅ Blog posts/articles
+- ✅ When speed is critical
+
+### Multi-Agent RAG with Iterative Refinement
+
+**Scenario**: You need the highest quality answers with multiple passes
+
+**How It Works**:
+```
+Iteration 1:
+  Supervisor → Retriever (find docs)
+             → Summarizer (condense)
+             → Generator (create answer)
+             → Critic (evaluate)
+
+Iteration 2 (if needed):
+  Critic feedback: "Incomplete on point X"
+  Supervisor → Generator (revise)
+             → Critic (re-evaluate)
+
+Iteration 3 (max):
+  Final answer returned
+```
+
+**Critic Scores** (each 0.0-1.0):
+- Accuracy: How correct is the information?
+- Completeness: Are all aspects covered?
+- Clarity: Is it well-explained?
+
+**Configuration**:
+```bash
+# Set max iterations
+docb config set multi_agent.max_iterations 5
+
+# Or in code:
+from src.agents.supervisor import MultiAgentSupervisor
+supervisor = MultiAgentSupervisor(
+    vectorstore=vs,
+    llm=llm,
+    max_iterations=5  # Try up to 5 refinement passes
+)
+```
+
+### Web Search Integration
+
+**When Activated**:
+- **Corrective RAG**: If insufficient relevant documents (< min_relevant_docs)
+- **Adaptive RAG**: When query routed to "web" category
+- **Multi-Agent**: Can be integrated in retriever
+
+**Example - Corrective RAG**:
+```
+Query: "What are the latest AI trends in 2026?"
+KB: Contains 2024 documentation
+
+Flow:
+  1. Retrieve docs (finds 2024 content)
+  2. Grade relevance (scores low - old)
+  3. Trigger web search (current info)
+  4. Combine: KB context + web results
+  5. Generate comprehensive answer
+```
+
+**Configuration**:
+```bash
+# Enable web search in Corrective RAG
+docb config set corrective_rag.min_relevant_docs 3
+
+# If found docs < 3, web search triggered
+```
 
 ## Extension Points
 
