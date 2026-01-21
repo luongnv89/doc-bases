@@ -39,16 +39,16 @@ jobs:
           pip install -r requirements-dev.txt
 
       - name: Check formatting with Black
-        run: black --check --diff src/ tests/
+        run: black --check --diff src/ tests/ --line-length=150
 
       - name: Check import sorting with isort
-        run: isort --check-only --diff src/ tests/
+        run: isort --check-only --diff src/ tests/ --profile=black --line-length=150
 
       - name: Lint with Ruff
         run: ruff check src/ tests/
 
       - name: Lint with Flake8
-        run: flake8 src/ tests/
+        run: flake8 src/ tests/ --max-line-length=150
 
   security:
     name: Security Scan
