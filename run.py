@@ -3,6 +3,7 @@
 Runner script for doc-bases project.
 This script properly handles Python module imports when running from the project root.
 """
+
 import os
 import sys
 
