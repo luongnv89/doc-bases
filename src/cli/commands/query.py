@@ -4,13 +4,70 @@ from pathlib import Path
 
 import typer
 
-from src.cli.utils import print_error, print_info, print_section
+from src.cli.utils import console, print_error, print_info, print_section
+from src.utils.kb_metadata import detect_file_changes, format_change_report, get_reindex_command
 from src.utils.logger import get_logger
 from src.utils.rag_utils import interactive_cli, list_knowledge_bases, load_rag_chain
 
 logger = get_logger()
 
 app = typer.Typer(help="Query knowledge bases")
+
+
+def check_and_prompt_for_changes(kb: str) -> bool:
+    """
+    Check for source file changes and prompt user for action.
+
+    Args:
+        kb: Knowledge base name
+
+    Returns:
+        True if the session should continue, False to exit for re-indexing
+    """
+    report = detect_file_changes(kb)
+
+    # Handle special cases
+    if report.error == "no_metadata":
+        console.print("[dim]Note: This KB does not have change tracking metadata.[/dim]")
+        console.print("[dim]Re-index with 'docb kb add' to enable change detection.[/dim]\n")
+        return True
+
+    if report.error == "source_not_found":
+        console.print(f"[yellow]Warning:[/yellow] Source path no longer exists: {report.source_path}")
+        console.print("[dim]The knowledge base may contain outdated information.[/dim]\n")
+        return True
+
+    if report.error == "remote_source":
+        # Remote sources (repo, website, url) don't support change detection
+        return True
+
+    if not report.has_changes:
+        return True
+
+    # Display change report
+    formatted = format_change_report(report, kb)
+    if formatted:
+        console.print(formatted)
+        console.print()
+
+    # Prompt user for action
+    console.print("[cyan]What would you like to do?[/cyan]")
+    console.print("  [1] Continue without updating")
+    console.print("  [2] Update KB now (shows re-index command)")
+
+    try:
+        choice = console.input("\n[cyan]Choice [1/2]: [/cyan]").strip()
+    except KeyboardInterrupt:
+        print_info("\nCancelled")
+        raise typer.Exit(0)
+
+    if choice == "2":
+        reindex_cmd = get_reindex_command(kb, report.source_type, report.source_path or "")
+        console.print("\n[cyan]Run this command to update the knowledge base:[/cyan]")
+        console.print(f"  [green]{reindex_cmd}[/green]\n")
+        return False
+
+    return True
 
 
 @app.command(name="interactive")
@@ -37,7 +94,7 @@ def interactive(
     """Start interactive querying session."""
     print_section("DocBases Interactive Query")
 
-    # If no KB specified, list available ones
+    # If no KB specified, check available ones
     if not kb:
         kbs = list_knowledge_bases()
         if not kbs:
@@ -53,19 +110,13 @@ def interactive(
                 print_info(f"  - {kb_name}")
             raise typer.Exit(1)
 
-    # Load RAG chain
-    print_info(f"Loading knowledge base: {kb}")
-    agent = load_rag_chain(kb)
+    # Check for file changes
+    if not check_and_prompt_for_changes(kb):
+        raise typer.Exit(0)
 
-    if not agent:
-        print_error(f"Failed to load knowledge base: {kb}")
-        raise typer.Exit(1)
-
-    print_info("Ready for queries. Type 'exit' to quit.\n")
-
-    # Call existing interactive CLI (which handles the query loop)
+    # Call interactive CLI with the KB name and session
     try:
-        interactive_cli()
+        interactive_cli(knowledge_base_name=kb, session_id=session)
     except KeyboardInterrupt:
         print_info("\nInteractive session ended")
         raise typer.Exit(0)
@@ -113,6 +164,10 @@ def single(
 
     print_info(f"KB: {kb}")
     print_info(f"Query: {query}")
+
+    # Check for file changes
+    if not check_and_prompt_for_changes(kb):
+        raise typer.Exit(0)
 
     # Load RAG chain
     agent = load_rag_chain(kb)
@@ -226,6 +281,10 @@ def batch(
             raise typer.Exit(1)
 
     print_info(f"KB: {kb}")
+
+    # Check for file changes
+    if not check_and_prompt_for_changes(kb):
+        raise typer.Exit(0)
 
     # Load RAG chain
     agent = load_rag_chain(kb)

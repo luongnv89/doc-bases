@@ -167,6 +167,17 @@ docb [global options] <command> [command options]
 ./docb kb info langchain
 ```
 
+The `kb info` command displays:
+- **Name**: Knowledge base identifier
+- **Path**: Storage location
+- **Vector Store**: ChromaDB status
+- **Source Type**: How the KB was created (folder, file, repo, website, url)
+- **Source Path**: Original source location
+- **Last Sync**: When the KB was last indexed
+- **Indexed Files**: Number of tracked source files
+- **Storage Files**: Files in the KB directory
+- **Size**: Total storage size
+
 ### Delete Knowledge Base
 
 ```bash
@@ -177,6 +188,65 @@ docb [global options] <command> [command options]
 ./docb kb delete my-kb-name --force
 ./docb kb delete my-kb-name -f  # Short form
 ```
+
+## File Change Detection
+
+DocBases automatically tracks source files and detects changes since the last sync. When you start a query session, the system checks if any source files have been added, modified, or deleted.
+
+### How It Works
+
+1. **On KB Creation**: Metadata is saved including file paths and modification times
+2. **On Query Start**: Source files are scanned and compared to the indexed state
+3. **If Changes Found**: You're prompted to continue or update the KB
+
+### Change Detection Prompt
+
+When changes are detected, you'll see:
+
+```
+Source files have changed since last sync:
+
+  Added (2 files):
+    • new-document.md
+    • guide.txt
+
+  Modified (1 file):
+    • readme.md
+
+  Deleted (1 file):
+    • old-file.md
+
+What would you like to do?
+  [1] Continue without updating
+  [2] Update KB now (shows re-index command)
+
+Choice [1/2]:
+```
+
+### Supported Source Types
+
+| Source Type | Change Detection |
+|-------------|------------------|
+| `folder` | Full tracking (added/modified/deleted) |
+| `file` | Full tracking (modified) |
+| `repo` | Limited (shows source URL only) |
+| `website` | Limited (shows source URL only) |
+| `url` | Limited (shows source URL only) |
+
+### Re-indexing a Knowledge Base
+
+If changes are detected and you want to update:
+
+```bash
+# The system shows the exact command to run
+docb kb add folder /path/to/docs --name my-kb --overwrite
+```
+
+### Edge Cases
+
+- **Old KBs without metadata**: Shows info message, continues normally
+- **Missing source path**: Warning displayed, allows continuing with outdated data
+- **Large change sets**: Truncated to first 10 files + count of remaining
 
 ## Querying Knowledge Bases
 

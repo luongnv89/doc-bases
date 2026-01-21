@@ -7,6 +7,7 @@ from rich.table import Table
 
 from src.cli.utils import confirm, console, print_error, print_info, print_section, print_success
 from src.utils.document_loader import DocumentLoader
+from src.utils.kb_metadata import KBMetadataManager, collect_file_info, collect_single_file_info
 from src.utils.rag_utils import delete_knowledge_base, list_knowledge_bases, setup_rag
 from src.utils.utilities import generate_knowledge_base_name
 
@@ -69,7 +70,9 @@ def add(
         raise typer.Exit(1)
 
     # Generate KB name if not provided
-    kb_name = name or generate_knowledge_base_name(source)
+    # Map string source_type to integer for generate_knowledge_base_name
+    source_type_map = {"repo": 1, "file": 2, "folder": 3, "website": 4, "url": 5}
+    kb_name = name or generate_knowledge_base_name(source_type_map.get(source_type, 0), source)
     print_info(f"Knowledge base name: {kb_name}")
 
     # Check if KB already exists
@@ -84,6 +87,10 @@ def add(
     try:
         _ = setup_rag(docs, kb_name)
         print_success(f"Knowledge base '{kb_name}' created successfully")
+
+        # Save metadata for change detection
+        _save_kb_metadata(kb_name, source_type, source)
+
         console.print("\n[cyan]Next steps:[/cyan]")
         console.print(f"  Query: [cyan]docb query --kb {kb_name}[/cyan]")
         console.print(f"  Info: [cyan]docb kb info {kb_name}[/cyan]")
@@ -91,6 +98,29 @@ def add(
     except Exception as e:
         print_error(f"Failed to setup RAG: {e}")
         raise typer.Exit(1)
+
+
+def _save_kb_metadata(kb_name: str, source_type: str, source: str) -> None:
+    """Save metadata for a knowledge base after creation."""
+    manager = KBMetadataManager(kb_name)
+
+    # Collect file info based on source type
+    if source_type == "folder":
+        source_path = str(Path(source).resolve())
+        indexed_files = collect_file_info(source_path)
+    elif source_type == "file":
+        source_path = str(Path(source).resolve())
+        indexed_files = collect_single_file_info(source_path)
+    else:
+        # For repo, website, url - store source but no file tracking
+        source_path = source
+        indexed_files = []
+
+    if manager.save_metadata(source_type, source_path, indexed_files):
+        if indexed_files:
+            print_info(f"Tracking {len(indexed_files)} source file(s) for change detection")
+    else:
+        print_info("Note: Could not save metadata for change tracking")
 
 
 @app.command()
@@ -160,6 +190,51 @@ def delete(
 
 
 @app.command()
+def rename(
+    old_name: str = typer.Argument(..., help="Current knowledge base name"),
+    new_name: str = typer.Argument(..., help="New knowledge base name"),
+    force: bool = typer.Option(
+        False,
+        "--force",
+        "-f",
+        help="Don't ask for confirmation",
+    ),
+) -> None:
+    """Rename a knowledge base."""
+    print_section("Rename Knowledge Base")
+
+    old_path = Path("knowledges") / old_name
+    new_path = Path("knowledges") / new_name
+
+    # Check if old KB exists
+    if not old_path.exists():
+        print_error(f"Knowledge base not found: {old_name}")
+        raise typer.Exit(1)
+
+    # Check if new name already exists
+    if new_path.exists():
+        print_error(f"Knowledge base already exists: {new_name}")
+        raise typer.Exit(1)
+
+    # Confirm rename
+    if not force:
+        console.print(f"\nRename: [cyan]{old_name}[/cyan] -> [green]{new_name}[/green]")
+        if not confirm("Proceed with rename?", default=True):
+            print_info("Cancelled")
+            raise typer.Exit(0)
+
+    try:
+        old_path.rename(new_path)
+        print_success(f"Knowledge base renamed: '{old_name}' -> '{new_name}'")
+        console.print("\n[cyan]Usage:[/cyan]")
+        console.print(f"  Query: [cyan]docb query --kb {new_name}[/cyan]")
+        console.print(f"  Info: [cyan]docb kb info {new_name}[/cyan]")
+    except Exception as e:
+        print_error(f"Failed to rename knowledge base: {e}")
+        raise typer.Exit(1)
+
+
+@app.command()
 def info(name: str = typer.Argument(..., help="Knowledge base name")) -> None:
     """Show knowledge base information."""
     print_section(f"Knowledge Base: {name}")
@@ -185,9 +260,20 @@ def info(name: str = typer.Argument(..., help="Knowledge base name")) -> None:
         table.add_row("Path", str(kb_path))
         table.add_row("Vector Store", "ChromaDB" if vector_store_path.exists() else "Not initialized")
 
+        # Load metadata if available
+        manager = KBMetadataManager(name)
+        metadata = manager.load_metadata()
+
+        if metadata:
+            table.add_row("Source Type", metadata.get("source_type", "Unknown"))
+            table.add_row("Source Path", metadata.get("source_path", "Unknown"))
+            table.add_row("Last Sync", metadata.get("last_sync_at", "Unknown"))
+            indexed_files = metadata.get("indexed_files", [])
+            table.add_row("Indexed Files", str(len(indexed_files)))
+
         # Count files in KB
         kb_files = list(kb_path.glob("**/*"))
-        table.add_row("Files", str(len([f for f in kb_files if f.is_file()])))
+        table.add_row("Storage Files", str(len([f for f in kb_files if f.is_file()])))
 
         # Size
         total_size = sum(f.stat().st_size for f in kb_files if f.is_file())
@@ -198,6 +284,9 @@ def info(name: str = typer.Argument(..., help="Knowledge base name")) -> None:
         table.add_row("Metrics", "Enabled" if metrics_db.exists() else "Disabled")
 
         console.print(table)
+
+        if not metadata:
+            console.print("\n[dim]Note: No metadata found (older KB without change tracking)[/dim]")
 
         console.print("\n[cyan]Usage:[/cyan]")
         console.print(f"  Query: [cyan]docb query --kb {name}[/cyan]")

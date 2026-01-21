@@ -95,6 +95,7 @@ Then in the legacy menu:
 - **Multi-Agent Orchestration**: Specialized agents (Retriever, Summarizer, Critic) with supervisor
 - **Persistent Memory**: SQLite-backed session storage with resumable conversations
 - **Performance Observability**: LangSmith integration, metrics dashboard, query logging
+- **File Change Detection**: Automatic detection of source file changes with update prompts
 
 ## Documentation
 
