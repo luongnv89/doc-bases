@@ -10,7 +10,9 @@ Workflow:
 6. Return validated answer
 """
 
-from typing import Annotated, Any, Literal, TypedDict
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Annotated, Any, Literal, TypedDict
 
 from langchain_core.documents import Document
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
@@ -20,6 +22,9 @@ from langgraph.graph.message import add_messages
 from src.evaluation.rag_evaluator import RAGEvaluator
 from src.tools.web_search import web_search_to_documents
 from src.utils.logger import get_logger
+
+if TYPE_CHECKING:
+    from src.retrieval.hybrid_retriever import HybridRetriever
 
 logger = get_logger()
 
@@ -40,25 +45,42 @@ class CRAGState(TypedDict):
 class CorrectiveRAGGraph:
     """
     Self-corrective RAG with relevance grading and web search fallback.
+
+    Supports hybrid retrieval when a HybridRetriever is provided.
     """
 
-    def __init__(self, vectorstore, llm, checkpointer=None, relevance_threshold: float = 0.5, min_relevant_docs: int = 1):
+    def __init__(
+        self,
+        vectorstore,
+        llm,
+        retriever: HybridRetriever | None = None,
+        checkpointer=None,
+        relevance_threshold: float = 0.5,
+        min_relevant_docs: int = 1,
+    ):
         self.vectorstore = vectorstore
         self.llm = llm
+        self.retriever = retriever
         self.checkpointer = checkpointer
         self.evaluator = RAGEvaluator(llm)
         self.relevance_threshold = relevance_threshold
         self.min_relevant_docs = min_relevant_docs
 
         self.graph = self._build_graph()
-        logger.info("CorrectiveRAGGraph initialized")
+        logger.info(f"CorrectiveRAGGraph initialized (hybrid_retriever={retriever is not None})")
 
     async def retrieve(self, state: CRAGState) -> CRAGState:
-        """Retrieve documents from vectorstore."""
+        """Retrieve documents from vectorstore or hybrid retriever."""
         logger.info(f"Retrieving documents for: {state['question']}")
 
-        retriever = self.vectorstore.as_retriever(search_kwargs={"k": 5})
-        docs = await retriever.ainvoke(state["question"])
+        if self.retriever:
+            # Use hybrid retriever if available
+            docs = await self.retriever.ainvoke(state["question"], k=5)
+            logger.debug("Using HybridRetriever for document retrieval")
+        else:
+            # Fallback to direct vectorstore retrieval
+            retriever = self.vectorstore.as_retriever(search_kwargs={"k": 5})
+            docs = await retriever.ainvoke(state["question"])
 
         state["documents"] = docs
         logger.info(f"Retrieved {len(docs)} documents")

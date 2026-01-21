@@ -2,7 +2,9 @@
 Supervisor for multi-agent orchestration.
 """
 
-from typing import Annotated, Any, Literal, TypedDict
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Annotated, Any, Literal, TypedDict
 
 from langchain_core.documents import Document
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
@@ -13,6 +15,9 @@ from langgraph.graph.message import add_messages
 from src.agents.critic_agent import CriticAgent
 from src.agents.summarizer_agent import SummarizerAgent
 from src.utils.logger import get_logger
+
+if TYPE_CHECKING:
+    from src.retrieval.hybrid_retriever import HybridRetriever
 
 logger = get_logger()
 
@@ -41,11 +46,21 @@ class MultiAgentSupervisor:
     3. Generator creates answer
     4. Critic validates quality
     5. Iterate if revision needed
+
+    Supports hybrid retrieval when a HybridRetriever is provided.
     """
 
-    def __init__(self, vectorstore, llm, checkpointer=None, max_iterations: int = 3):
+    def __init__(
+        self,
+        vectorstore,
+        llm,
+        retriever: HybridRetriever | None = None,
+        checkpointer=None,
+        max_iterations: int = 3,
+    ):
         self.vectorstore = vectorstore
         self.llm = llm
+        self.retriever = retriever
         self.checkpointer = checkpointer
         self.max_iterations = max_iterations
 
@@ -82,7 +97,7 @@ What's the next step?""",
         )
 
         self.graph = self._build_graph()
-        logger.info("MultiAgentSupervisor initialized")
+        logger.info(f"MultiAgentSupervisor initialized (hybrid_retriever={retriever is not None})")
 
     async def supervisor_routing(self, state: SupervisorState) -> SupervisorState:
         """Decide which agent to call next."""
@@ -109,11 +124,15 @@ What's the next step?""",
         return next_agent if next_agent in ["retriever", "summarizer", "generator", "critic", "END"] else "END"  # type: ignore
 
     async def call_retriever(self, state: SupervisorState) -> SupervisorState:
-        """Retrieve documents from vectorstore."""
+        """Retrieve documents from vectorstore or hybrid retriever."""
         logger.info(f"Retriever: fetching documents for '{state['question']}'")
 
-        retriever = self.vectorstore.as_retriever(search_kwargs={"k": 5})
-        docs = await retriever.ainvoke(state["question"])
+        if self.retriever:
+            docs = await self.retriever.ainvoke(state["question"], k=5)
+            logger.debug("Using HybridRetriever for document retrieval")
+        else:
+            retriever = self.vectorstore.as_retriever(search_kwargs={"k": 5})
+            docs = await retriever.ainvoke(state["question"])
 
         state["documents"] = docs
         state["iteration"] += 1

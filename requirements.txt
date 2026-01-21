@@ -68,6 +68,13 @@ python-pptx>=1.0.2
 langsmith>=0.3.0
 
 # -----------------------------------------------------------------------------
+# Hybrid Search & Reranking (Phase 6)
+# -----------------------------------------------------------------------------
+rank-bm25>=0.2.2                # BM25 keyword search for hybrid retrieval
+sentence-transformers>=2.2.0    # Cross-encoder reranking (optional, for local reranking)
+# cohere>=5.0.0                 # Cohere Rerank API (optional, uncomment if needed)
+
+# -----------------------------------------------------------------------------
 # Development Dependencies
 # -----------------------------------------------------------------------------
 pytest>=7.0.0

@@ -43,6 +43,16 @@ class ConfigManager:
             "langsmith_tracing": False,
             "langsmith_project": "doc-bases",
         },
+        "retrieval": {
+            "mode": "dense",
+            "k": 10,
+            "final_k": 5,
+            "rrf_constant": 60,
+        },
+        "reranker": {
+            "provider": None,
+            "model": "cross-encoder/ms-marco-MiniLM-L-6-v2",
+        },
     }
 
     # Mapping from config keys to environment variables
@@ -61,6 +71,12 @@ class ConfigManager:
         "persistence.metrics_db_path": "METRICS_DB_PATH",
         "observability.langsmith_tracing": "LANGSMITH_TRACING",
         "observability.langsmith_project": "LANGSMITH_PROJECT",
+        "retrieval.mode": "RETRIEVAL_MODE",
+        "retrieval.k": "RETRIEVAL_K",
+        "retrieval.final_k": "RETRIEVAL_FINAL_K",
+        "retrieval.rrf_constant": "RRF_CONSTANT",
+        "reranker.provider": "RERANKER_PROVIDER",
+        "reranker.model": "RERANKER_MODEL",
     }
 
     def __init__(self, custom_config_path: str | None = None):
@@ -243,6 +259,17 @@ class ConfigManager:
         valid_strategies = ["recursive", "semantic"]
         if self.get("rag.chunking_strategy") not in valid_strategies:
             errors.append(f"rag.chunking_strategy must be one of: {', '.join(valid_strategies)}")
+
+        # Check retrieval mode is valid
+        valid_retrieval_modes = ["dense", "hybrid"]
+        if self.get("retrieval.mode") not in valid_retrieval_modes:
+            errors.append(f"retrieval.mode must be one of: {', '.join(valid_retrieval_modes)}")
+
+        # Check reranker provider is valid (if set)
+        reranker_provider = self.get("reranker.provider")
+        valid_reranker_providers = [None, "", "cross-encoder", "cohere", "none", "passthrough"]
+        if reranker_provider not in valid_reranker_providers:
+            errors.append(f"reranker.provider must be one of: {', '.join(str(p) for p in valid_reranker_providers if p)}")
 
         return errors
 

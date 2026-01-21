@@ -51,6 +51,10 @@ from src.models.embeddings import get_embedding_model
 from src.models.llm import get_llm_model
 from src.observability.langsmith_tracer import setup_langsmith_tracing
 from src.observability.metrics import get_metrics_tracker
+from src.retrieval.bm25_index import BM25Index
+
+# Phase 6: Hybrid Search & Reranking
+from src.retrieval.hybrid_retriever import HybridRetriever, create_hybrid_retriever
 from src.utils.logger import custom_theme, get_logger  # Import custom_theme
 from src.utils.utilities import format_image_error_message, validate_file_paths
 
@@ -70,7 +74,8 @@ def create_vector_store(documents: list[Document], knowledge_base_name: str) -> 
     """
     Create a vector store from documents without initializing a RAG agent.
 
-    This function only creates embeddings and stores them in ChromaDB.
+    This function creates embeddings and stores them in ChromaDB.
+    If RETRIEVAL_MODE=hybrid, it also builds a BM25 index for keyword search.
     Use this for `kb add` operations where you don't need the full RAG agent.
 
     Args:
@@ -99,6 +104,20 @@ def create_vector_store(documents: list[Document], knowledge_base_name: str) -> 
     logger.info(f"Embedding process for '{knowledge_base_name}' completed.")
     console.print(f"[success]Vector store for '{knowledge_base_name}' created successfully.[/success]")
 
+    # Phase 6: Build BM25 index for hybrid search if configured
+    retrieval_mode = os.getenv("RETRIEVAL_MODE", "dense").lower()
+    if retrieval_mode == "hybrid":
+        console.print("[info]Building BM25 index for hybrid search...[/info]")
+        try:
+            bm25_index = BM25Index(knowledge_base_name)
+            bm25_index.build_index(documents)
+            bm25_index.save_index()
+            console.print(f"[success]BM25 index created for '{knowledge_base_name}'[/success]")
+            logger.info(f"BM25 index built for '{knowledge_base_name}' with {len(documents)} documents")
+        except Exception as e:
+            console.print(f"[warning]Failed to build BM25 index: {e}. Hybrid search will use dense-only.[/warning]")
+            logger.warning(f"Failed to build BM25 index for '{knowledge_base_name}': {e}")
+
     return vectorstore
 
 
@@ -107,12 +126,38 @@ def get_rag_mode() -> str:
     return os.getenv("RAG_MODE", "basic").lower()
 
 
-def get_retriever_tool(vectorstore):
+def get_retriever_tool(vectorstore, kb_name: str | None = None):
+    """
+    Create a retrieval tool for the basic RAG agent.
+
+    Uses HybridRetriever if configured, otherwise falls back to direct vectorstore.
+
+    Args:
+        vectorstore: The ChromaDB vector store.
+        kb_name: Knowledge base name (required for hybrid retrieval).
+
+    Returns:
+        A LangChain tool for document retrieval.
+    """
+    # Create hybrid retriever if kb_name provided and hybrid mode configured
+    hybrid_retriever: HybridRetriever | None = None
+    if kb_name:
+        retrieval_mode = os.getenv("RETRIEVAL_MODE", "dense").lower()
+        if retrieval_mode == "hybrid" or os.getenv("RERANKER_PROVIDER", "").strip():
+            try:
+                hybrid_retriever = create_hybrid_retriever(vectorstore, kb_name)
+                logger.info(f"Created HybridRetriever for basic RAG (mode={retrieval_mode})")
+            except Exception as e:
+                logger.warning(f"Failed to create HybridRetriever, using dense search: {e}")
+
     @tool
     def retrieve_context(query: str):
         """Retrieve relevant documents from the knowledge base."""
-        retriever = vectorstore.as_retriever()
-        docs = retriever.invoke(query)
+        if hybrid_retriever:
+            docs = hybrid_retriever.invoke(query)
+        else:
+            retriever = vectorstore.as_retriever()
+            docs = retriever.invoke(query)
         return "\n\n".join(doc.page_content for doc in docs)
 
     return retrieve_context
@@ -156,23 +201,35 @@ def setup_rag(documents: list[Document], knowledge_base_name: str, llm=None):
     else:
         memory = get_checkpointer()
 
+    # Phase 6: Create hybrid retriever if configured
+    retrieval_mode = os.getenv("RETRIEVAL_MODE", "dense").lower()
+    retriever: HybridRetriever | None = None
+    if retrieval_mode == "hybrid" or os.getenv("RERANKER_PROVIDER", "").strip():
+        try:
+            retriever = create_hybrid_retriever(vectorstore, knowledge_base_name)
+            console.print(f"[info]Retrieval Mode: {retrieval_mode.capitalize()}[/info]")
+            logger.info(f"Created HybridRetriever (mode={retrieval_mode})")
+        except Exception as e:
+            console.print(f"[warning]Hybrid retrieval unavailable: {e}[/warning]")
+            logger.warning(f"Failed to create HybridRetriever: {e}")
+
     agent: Any
     if rag_mode == "corrective":
         logger.info("Setting up Corrective RAG mode")
         console.print("[info]RAG Mode: Corrective[/info]")
-        agent = CorrectiveRAGGraph(vectorstore, llm, checkpointer=memory)
+        agent = CorrectiveRAGGraph(vectorstore, llm, retriever=retriever, checkpointer=memory)
     elif rag_mode == "adaptive":
         logger.info("Setting up Adaptive RAG mode")
         console.print("[info]RAG Mode: Adaptive[/info]")
-        agent = AdaptiveRAGGraph(vectorstore, llm, checkpointer=memory)
+        agent = AdaptiveRAGGraph(vectorstore, llm, retriever=retriever, checkpointer=memory)
     elif rag_mode == "multi_agent":
         logger.info("Setting up Multi-Agent RAG mode")
         console.print("[info]RAG Mode: Multi-Agent[/info]")
-        agent = MultiAgentSupervisor(vectorstore, llm, checkpointer=memory)
+        agent = MultiAgentSupervisor(vectorstore, llm, retriever=retriever, checkpointer=memory)
     else:
         logger.info("Setting up Basic RAG mode")
         console.print("[info]RAG Mode: Basic[/info]")
-        retrieve_tool = get_retriever_tool(vectorstore)
+        retrieve_tool = get_retriever_tool(vectorstore, kb_name=knowledge_base_name)
         agent = create_react_agent(llm, [retrieve_tool], checkpointer=memory)
 
     logger.info(f"Agentic RAG with memory setup completed for knowledge base: '{knowledge_base_name}'.")
@@ -246,23 +303,35 @@ def load_rag_chain(knowledge_base_name: str, llm=None):
     else:
         memory = get_checkpointer()
 
+    # Phase 6: Create hybrid retriever if configured
+    retrieval_mode = os.getenv("RETRIEVAL_MODE", "dense").lower()
+    retriever: HybridRetriever | None = None
+    if retrieval_mode == "hybrid" or os.getenv("RERANKER_PROVIDER", "").strip():
+        try:
+            retriever = create_hybrid_retriever(vectorstore, knowledge_base_name)
+            console.print(f"[info]Retrieval Mode: {retrieval_mode.capitalize()}[/info]")
+            logger.info(f"Created HybridRetriever (mode={retrieval_mode})")
+        except Exception as e:
+            console.print(f"[warning]Hybrid retrieval unavailable: {e}[/warning]")
+            logger.warning(f"Failed to create HybridRetriever: {e}")
+
     agent: Any
     if rag_mode == "corrective":
         logger.info("Loading Corrective RAG mode")
         console.print("[info]RAG Mode: Corrective[/info]")
-        agent = CorrectiveRAGGraph(vectorstore, llm, checkpointer=memory)
+        agent = CorrectiveRAGGraph(vectorstore, llm, retriever=retriever, checkpointer=memory)
     elif rag_mode == "adaptive":
         logger.info("Loading Adaptive RAG mode")
         console.print("[info]RAG Mode: Adaptive[/info]")
-        agent = AdaptiveRAGGraph(vectorstore, llm, checkpointer=memory)
+        agent = AdaptiveRAGGraph(vectorstore, llm, retriever=retriever, checkpointer=memory)
     elif rag_mode == "multi_agent":
         logger.info("Loading Multi-Agent RAG mode")
         console.print("[info]RAG Mode: Multi-Agent[/info]")
-        agent = MultiAgentSupervisor(vectorstore, llm, checkpointer=memory)
+        agent = MultiAgentSupervisor(vectorstore, llm, retriever=retriever, checkpointer=memory)
     else:
         logger.info("Loading Basic RAG mode")
         console.print("[info]RAG Mode: Basic[/info]")
-        retrieve_tool = get_retriever_tool(vectorstore)
+        retrieve_tool = get_retriever_tool(vectorstore, kb_name=knowledge_base_name)
         agent = create_react_agent(llm, [retrieve_tool], checkpointer=memory)
 
     logger.info(f"Agentic RAG with memory loaded for knowledge base: {knowledge_base_name}")

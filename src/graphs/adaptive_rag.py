@@ -7,7 +7,9 @@ Routes queries to optimal retrieval strategy:
 - Web: External web search for out-of-domain queries
 """
 
-from typing import Annotated, Any, Literal, TypedDict
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Annotated, Any, Literal, TypedDict
 
 from langchain_core.documents import Document
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
@@ -17,6 +19,9 @@ from langgraph.graph.message import add_messages
 
 from src.tools.web_search import web_search_to_documents
 from src.utils.logger import get_logger
+
+if TYPE_CHECKING:
+    from src.retrieval.hybrid_retriever import HybridRetriever
 
 logger = get_logger()
 
@@ -34,11 +39,20 @@ class AdaptiveRAGState(TypedDict):
 class AdaptiveRAGGraph:
     """
     Adaptive RAG with intelligent query routing.
+
+    Supports hybrid retrieval when a HybridRetriever is provided.
     """
 
-    def __init__(self, vectorstore, llm, checkpointer=None):
+    def __init__(
+        self,
+        vectorstore,
+        llm,
+        retriever: HybridRetriever | None = None,
+        checkpointer=None,
+    ):
         self.vectorstore = vectorstore
         self.llm = llm
+        self.retriever = retriever
         self.checkpointer = checkpointer
 
         self.classification_prompt = ChatPromptTemplate.from_messages(
@@ -58,7 +72,7 @@ Respond with ONLY: simple, complex, or web""",
         )
 
         self.graph = self._build_graph()
-        logger.info("AdaptiveRAGGraph initialized")
+        logger.info(f"AdaptiveRAGGraph initialized (hybrid_retriever={retriever is not None})")
 
     async def classify_query(self, state: AdaptiveRAGState) -> AdaptiveRAGState:
         """Classify query complexity/type."""
@@ -85,8 +99,12 @@ Respond with ONLY: simple, complex, or web""",
         """Fast direct retrieval for simple queries."""
         logger.info("Simple retrieval")
 
-        retriever = self.vectorstore.as_retriever(search_kwargs={"k": 3})
-        docs = await retriever.ainvoke(state["question"])
+        if self.retriever:
+            docs = await self.retriever.ainvoke(state["question"], k=3)
+            logger.debug("Using HybridRetriever for simple retrieval")
+        else:
+            retriever = self.vectorstore.as_retriever(search_kwargs={"k": 3})
+            docs = await retriever.ainvoke(state["question"])
 
         state["documents"] = docs
         return state
@@ -95,8 +113,12 @@ Respond with ONLY: simple, complex, or web""",
         """Multi-step retrieval for complex queries."""
         logger.info("Complex retrieval")
 
-        retriever = self.vectorstore.as_retriever(search_kwargs={"k": 6})
-        initial_docs = await retriever.ainvoke(state["question"])
+        if self.retriever:
+            initial_docs = await self.retriever.ainvoke(state["question"], k=6)
+            logger.debug("Using HybridRetriever for complex retrieval")
+        else:
+            retriever = self.vectorstore.as_retriever(search_kwargs={"k": 6})
+            initial_docs = await retriever.ainvoke(state["question"])
 
         # Generate sub-queries
         subquery_prompt = ChatPromptTemplate.from_messages([("system", "Generate 2 related queries. One per line."), ("human", "{question}")])
@@ -109,7 +131,11 @@ Respond with ONLY: simple, complex, or web""",
         all_docs = list(initial_docs)
         for sq in subqueries[:2]:
             if sq.strip():
-                sub_docs = await retriever.ainvoke(sq.strip())
+                if self.retriever:
+                    sub_docs = await self.retriever.ainvoke(sq.strip(), k=3)
+                else:
+                    retriever = self.vectorstore.as_retriever(search_kwargs={"k": 3})
+                    sub_docs = await retriever.ainvoke(sq.strip())
                 all_docs.extend(sub_docs)
 
         # Deduplicate
@@ -128,8 +154,12 @@ Respond with ONLY: simple, complex, or web""",
         """Web search for external information."""
         logger.info("Web retrieval")
 
-        retriever = self.vectorstore.as_retriever(search_kwargs={"k": 2})
-        local_docs = await retriever.ainvoke(state["question"])
+        if self.retriever:
+            local_docs = await self.retriever.ainvoke(state["question"], k=2)
+            logger.debug("Using HybridRetriever for web retrieval")
+        else:
+            retriever = self.vectorstore.as_retriever(search_kwargs={"k": 2})
+            local_docs = await retriever.ainvoke(state["question"])
 
         web_docs = web_search_to_documents(state["question"], max_results=3)
 
