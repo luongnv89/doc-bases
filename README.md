@@ -1,3 +1,5 @@
+<p align="center"><img src="logo.png" alt="DocBases Logo" width="400"></p>
+
 # DocBases
 
 **Intelligent Answers from Any Document**
